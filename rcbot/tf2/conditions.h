@@ -78,23 +78,20 @@ typedef enum : std::uint8_t
 	TFCond_CritOnFlagCapture = 39, //39: Intelligence capture crit-boost
 	TFCond_CritOnKill = 40, //40: Crit-boost from crit-on-kill weapons
 	TFCond_RestrictToMelee = 41, //41: Prevents switching once melee is out
-	TFCond_DefenseBuffNoCritBlock = 42,
-	//42: MvM Bomb Carrier defense buff (TFCond_DefenseBuffed without crit resistance)
+	TFCond_DefenseBuffNoCritBlock = 42, //42: MvM Bomb Carrier defense buff (TFCond_DefenseBuffed without crit resistance)
 	TFCond_Reprogrammed = 43, //43: No longer functions
 	TFCond_CritMmmph = 44, //44: Phlogistinator crit-boost
 	TFCond_DefenseBuffMmmph = 45, //45: Old Phlogistinator defense buff
 	TFCond_FocusBuff = 46, //46: Hitman's Heatmaker no-unscope and faster Sniper charge
 	TFCond_DisguiseRemoved = 47, //47: Enforcer damage bonus removed
 	TFCond_MarkedForDeathSilent = 48, //48: Marked-for-death without sound effect
-	TFCond_DisguisedAsDispenser = 49,
-	//49: Dispenser disguise when crouching, max movement speed, sentries ignore player
+	TFCond_DisguisedAsDispenser = 49, //49: Dispenser disguise when crouching, max movement speed, sentries ignore player
 	TFCond_Sapped = 50, //50: Sapper sparkle effect in MvM
 	TFCond_UberchargedHidden = 51, //51: Out-of-bounds robot invulnerability effect
 	TFCond_UberchargedCanteen = 52, //52: Invulnerability effect and Sentry Gun damage resistance
 	TFCond_HalloweenBombHead = 53, //53: Bomb head effect (does not explode)
 	TFCond_HalloweenThriller = 54, //54: Forced Thriller taunting
-	TFCond_RadiusHealOnDamage = 55,
-	//55: Radius healing, adds TFCond_InHealRadius, TFCond_Healing. Removed when a taunt ends, but this condition stays but does nothing
+	TFCond_RadiusHealOnDamage = 55, //55: Radius healing, adds TFCond_InHealRadius, TFCond_Healing. Removed when a taunt ends, but this condition stays but does nothing
 	TFCond_CritOnDamage = 56, //56: Miscellaneous crit-boost
 	TFCond_UberchargedOnTakeDamage = 57, //57: Miscellaneous invulnerability
 	TFCond_UberBulletResist = 58, //58: Vaccinator Uber bullet resistance
@@ -136,20 +133,15 @@ typedef enum : std::uint8_t
 	TFCond_RuneRegen = 92, //92: Regen ammo, health, and metal
 	TFCond_RuneResist = 93, //93: Takes 1/2 damage and critical immunity
 	TFCond_RuneVampire = 94, //94: Takes 3/4 damage, gain health on damage, and 40% increase in max health
-	TFCond_RuneWarlock = 95,
-	//95: Attacker takes damage and knockback on hitting the player and 50% increase in max health
-	TFCond_RunePrecision = 96,
-	//96: Less bullet spread, no damage falloff, 250% faster projectiles, and double damage, faster charge, and faster re-zoom for Sniper Rifles
-	TFCond_RuneAgility = 97,
-	//97: Increased movement speed, grappling hook speed, jump height, and instant weapon switch
+	TFCond_RuneWarlock = 95, //95: Attacker takes damage and knockback on hitting the player and 50% increase in max health
+	TFCond_RunePrecision = 96, //96: Less bullet spread, no damage falloff, 250% faster projectiles, and double damage, faster charge, and faster re-zoom for Sniper Rifles
+	TFCond_RuneAgility = 97, //97: Increased movement speed, grappling hook speed, jump height, and instant weapon switch
 	TFCond_GrapplingHook = 98, //98: Used when a player fires their grappling hook, no effect applying or removing
-	TFCond_GrapplingHookSafeFall = 99,
-	//99: Used when a player is pulled by their grappling hook, no effect applying or removing
+	TFCond_GrapplingHookSafeFall = 99, //99: Used when a player is pulled by their grappling hook, no effect applying or removing
 	TFCond_GrapplingHookLatched = 100, //100: Used when a player latches onto a wall, no effect applying or removing
 	TFCond_GrapplingHookBleeding = 101, //101: Used when a player is hit by attacker's grappling hook
 	TFCond_AfterburnImmune = 102, //102: Deadringer afterburn immunity
-	TFCond_RuneKnockout = 103,
-	//103: Melee and grappling hook only, increased max health, knockback immunity, x4 more damage against buildings, and knockbacks a powerup off a victim on hit
+	TFCond_RuneKnockout = 103, //103: Melee and grappling hook only, increased max health, knockback immunity, x4 more damage against buildings, and knockbacks a powerup off a victim on hit
 	TFCond_RuneImbalance = 104, //104: Prevents gaining a crit-boost or Uber powerups
 	TFCond_CritRuneTemp = 105, //105: Crit-boost effect
 	TFCond_PasstimeInterception = 106, //106: Used when a player intercepts the Jack/Ball
@@ -157,8 +149,7 @@ typedef enum : std::uint8_t
 	TFCond_EyeaductUnderworld = 108, //108: Refills max health, short Uber, escaped the underworld message on removal
 	TFCond_KingRune = 109, //109: Increased max health and applies TFCond_KingAura
 	TFCond_PlagueRune = 110, //110: Radius health kit stealing, increased max health, TFCond_Plague on touching a victim
-	TFCond_SupernovaRune = 111,
-	//111: Charge meter passively increasing, when charged activiated causes radius Bonk stun
+	TFCond_SupernovaRune = 111, //111: Charge meter passively increasing, when charged activiated causes radius Bonk stun
 	TFCond_Plague = 112, //112: Plague sound effect and message, blocks King powerup health regen
 	TFCond_KingAura = 113, //113: Increased fire rate, reload speed, and health regen to players in a radius
 	TFCond_SpawnOutline = 114, //114: Outline and health meter of teammates (and disguised spies)

@@ -7905,6 +7905,18 @@ bool CBotTF2::isEnemy(edict_t* pEdict, const bool bCheckWeapons)
 			else
 				bValid = true;
 		}
+		
+		if (mp_friendlyfire.GetBool())
+		{
+			if (CBotGlobals::getTeam(pEdict) == getTeam())
+				return true;
+		}
+		else if (!mp_friendlyfire.GetBool())
+		{
+			if (CBotGlobals::getTeam(pEdict) == getTeam())
+				return false;
+		}
+
 		if (CTeamFortress2Mod::isMapType(TF_MAP_GG))
 		{
 			if (CBotGlobals::getTeam(pEdict) == getTeam())
@@ -7928,10 +7940,6 @@ bool CBotTF2::isEnemy(edict_t* pEdict, const bool bCheckWeapons)
 					bValid = true;
 				}
 			}*/
-		}
-		if (CBotGlobals::getTeam(pEdict) == getTeam())
-		{
-				return mp_friendlyfire.GetBool();
 		}
 	}
 	// TODO: to allow bots to properly attack RD Robots [APG]RoboCop[CL]
