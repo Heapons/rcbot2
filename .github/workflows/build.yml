@@ -15,7 +15,8 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
-          - windows-latest
+          - windows-x32
+          - windows-x64
         include:
           - meta_branch: "1.11-dev"
             sm_branch: "1.11-dev"
@@ -27,14 +28,28 @@ jobs:
             dbg_ext: dbg
             cc: clang
             cxx: clang++
+            vs_arch: unused
+            am_arch: x86,x86_64
 
-          - os: windows-latest
-            os_short: win
+          - os: windows-x32
+            os_short: win32
             os_version: windows-latest
             package_ext: zip
             dbg_ext: pdb
             cc: not-used
             cxx: not-used
+            vs_arch: x32
+            am_arch: x86
+
+          - os: windows-x64
+            os_short: win64
+            os_version: windows-latest
+            package_ext: zip
+            dbg_ext: pdb
+            cc: not-used
+            cxx: not-used
+            vs_arch: x64
+            am_arch: x86_64
 
     steps:
     - name: Install (Linux)
@@ -56,7 +71,7 @@ jobs:
       run: |
         :: See https://github.com/microsoft/vswhere/wiki/Find-VC
         for /f "usebackq delims=*" %%i in (`vswhere -latest -property installationPath`) do (
-          call "%%i"\Common7\Tools\vsdevcmd.bat -arch=x86 -host_arch=x64
+          call "%%i"\Common7\Tools\vsdevcmd.bat -arch=${{ matrix.vs_arch }} -host_arch=x64
         )
         
         :: Loop over all environment variables and make them global.
@@ -86,7 +101,7 @@ jobs:
       run: |
         mkdir post
         cd post
-        python3 ../configure.py --sdks=present --mms-path="${{ github.workspace }}/rcbot2/alliedmodders/metamod-source" --sm-path="${{ github.workspace }}/rcbot2/alliedmodders/sourcemod" --hl2sdk-root="${{ github.workspace }}/rcbot2/alliedmodders" --symbol-files
+        python3 ../configure.py --sdks=present --mms-path="${{ github.workspace }}/rcbot2/alliedmodders/metamod-source" --sm-path="${{ github.workspace }}/rcbot2/alliedmodders/sourcemod" --hl2sdk-root="${{ github.workspace }}/rcbot2/alliedmodders" --symbol-files --target ${{ matrix.am_arch }} --enable-optimize
         ambuild
 
     - uses: benjlevesque/short-sha@v2.2
