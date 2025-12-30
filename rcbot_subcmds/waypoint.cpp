@@ -155,7 +155,7 @@ CBotCommandInline WaypointSaveCommand("save", CMD_ACCESS_WAYPOINT, [](CClient *p
 	return COMMAND_ACCESSED;
 });
 
-CBotCommandInline WaypointLoadCommand("load", CMD_ACCESS_WAYPOINT, [](CClient* pClient, const BotCommandArgs& args)
+CBotCommandInline WaypointLoadCommand("load", CMD_ACCESS_WAYPOINT | CMD_ACCESS_DEDICATED, [](CClient* pClient, const BotCommandArgs& args)
 {
 	const char* mapNameToLoad = (args[0] && *args[0]) ? args[0] : CBotGlobals::getMapName();
 	const bool bLoadOK = CWaypoints::load(mapNameToLoad);
