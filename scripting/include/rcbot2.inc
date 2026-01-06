@@ -94,5 +94,12 @@ public Extension __ext_rcbot2 = {
 
 #if !defined REQUIRE_EXTENSIONS
 public void __ext_rcbot2_SetNTVOptional() {
+	MarkNativeAsOptional("RCBot2_IsWaypointAvailable");
+	MarkNativeAsOptional("RCBot2_CreateBot");
+	MarkNativeAsOptional("IsRCBot2Client");
+	MarkNativeAsOptional("RCBot2_SetProfileInt");
+	MarkNativeAsOptional("RCBot2_GetProfileInt");
+	MarkNativeAsOptional("RCBot2_SetProfileFloat");
+	MarkNativeAsOptional("RCBot2_GetProfileFloat");
 }
 #endif
