@@ -66,8 +66,8 @@ jobs:
         sudo dpkg --add-architecture i386
         sudo apt-get update
         sudo apt-get install -y clang g++-multilib
-        echo "CC=clang" >> $GITHUB_ENV
-        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "CC=${{ matrix.cc }}" >> $GITHUB_ENV
+        echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
 
     - name: Add msbuild to PATH (Windows)
       if: runner.os == 'Windows'
@@ -90,7 +90,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ matrix.os == 'ubuntu-22.04' && '3.11' || '3.12' }}
 
     - name: Setup ambuild
       run: |
@@ -128,3 +128,47 @@ jobs:
         name: rcbot2-dbgsym-${{ matrix.os_short }}-${{ steps.short-sha.outputs.sha }}
         path: |
             rcbot2/post/**/*.${{ matrix.dbg_ext }}
+
+  combine_windows:
+    name: Combine Windows Builds
+    needs: build_main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: benjlevesque/short-sha@v2.2
+        id: short-sha
+      
+      - name: Download Win32 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rcbot2-win32-${{ steps.short-sha.outputs.sha }}
+          path: combined/win32
+      
+      - name: Download Win64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rcbot2-win64-${{ steps.short-sha.outputs.sha }}
+          path: combined/win64
+      
+      - name: Upload Combined Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rcbot2-windows-${{ steps.short-sha.outputs.sha }}
+          path: combined/
+
+      - name: Download Win32 Debug Symbols
+        uses: actions/download-artifact@v4
+        with:
+          name: rcbot2-dbgsym-win32-${{ steps.short-sha.outputs.sha }}
+          path: combined-dbgsym/win32
+      
+      - name: Download Win64 Debug Symbols
+        uses: actions/download-artifact@v4
+        with:
+          name: rcbot2-dbgsym-win64-${{ steps.short-sha.outputs.sha }}
+          path: combined-dbgsym/win64
+      
+      - name: Upload Combined Windows Debug Symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: rcbot2-dbgsym-windows-${{ steps.short-sha.outputs.sha }}
+          path: combined-dbgsym/
