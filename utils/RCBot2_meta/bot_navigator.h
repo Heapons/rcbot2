@@ -86,6 +86,9 @@ public:
 
 	virtual int getCurrentGoalID () = 0;
 
+	// Remaining nodes in the active route (0 = no onward route / disconnected). Debug only.
+	virtual int getRouteSize () { return 0; }
+
 	virtual Vector getNextPoint () = 0;
 
 	virtual void updatePosition () = 0;
@@ -472,6 +475,11 @@ public:
 	int getCurrentWaypointID () override
 	{
 		return m_iCurrentWaypoint;
+	}
+
+	int getRouteSize () override
+	{
+		return static_cast<int>(m_currentRoute.size());
 	}
 
 	int getCurrentGoalID () override

@@ -361,6 +361,47 @@ void CClient :: think ()
 	{
 		IPlayerInfo *p = playerinfomanager->GetPlayerInfo(m_pPlayer);
 
+		// Aim-to-select the debug bot: the bot you look at becomes the debug target.
+		// setDebugBot() was never called anywhere, so m_pDebugBot stayed null and
+		// per-bot debug (HUD readout, buttons) never displayed. Pick the bot most
+		// aligned with the player's view within a narrow cone; keep the last pick
+		// when not looking at any bot. [APG]RoboCop[CL]
+		if ( p != nullptr )
+		{
+			Vector vAim;
+			AngleVectors(p->GetLastUserCommand().viewangles, &vAim);
+			const Vector vOrigin = p->GetAbsOrigin();
+
+			edict_t *pLookBot = nullptr;
+			float fBestDot = 0.97f; // ~14 degree cone
+			const int iMaxClients = CBotGlobals::maxClients();
+
+			for ( int i = 1; i <= iMaxClients; i++ )
+			{
+				edict_t *pPlayer = engine->PEntityOfEntIndex(i);
+
+				if ( pPlayer == nullptr || pPlayer == m_pPlayer || pPlayer->IsFree() )
+					continue;
+				if ( CBots::getBotPointer(pPlayer) == nullptr )
+					continue; // only bots
+
+				Vector vDir = CBotGlobals::entityOrigin(pPlayer) - vOrigin;
+				const float fLen = vDir.Length();
+				if ( fLen < 1.0f )
+					continue;
+				vDir = vDir / fLen;
+
+				const float fDot = DotProduct(vAim, vDir);
+				if ( fDot > fBestDot )
+				{
+					fBestDot = fDot;
+					pLookBot = pPlayer;
+				}
+			}
+
+			if ( pLookBot != nullptr )
+				setDebugBot(pLookBot);
+		}
 
 		if ( isDebugOn(BOT_DEBUG_SPEED) )
 		{
