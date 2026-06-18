@@ -514,6 +514,12 @@ private:
 
 	Vector m_vOffset;
 	bool m_bOffsetApplied;
+
+	// Force-advance recovery: time at which a bot that's sat (barely moving) near its
+	// current node -- without registering the touch -- gives up and advances anyway.
+	// 0 = not currently parked. Fixes "frozen at a node" (height offset, undropped
+	// ledge, door-trigger gap) without us hunting each one. [APG]RoboCop[CL]
+	float m_fParkedAtNodeTime = 0.0f;
 };
 
 class CNavMeshNavigator : public IBotNavigator

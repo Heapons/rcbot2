@@ -1319,6 +1319,33 @@ void CWaypointNavigator :: updatePosition ()
 		if ( pWaypoint->hasFlag(CWaypointTypes::W_FL_LADDER) )
 			bTouched = bTouched && movetype_ok;
 
+		// Force-advance recovery: the "touched" test needs |Δz| <= WAYPOINT_HEIGHT (72u)
+		// as well as 2D proximity, but the bot stops moving once it's within ~8u 2D -- so a
+		// node whose height is off (stairs/ledge), or one just short of a door trigger, can
+		// leave the bot parked here forever (touch never registers -> never advances). If
+		// we're sat right next to the node, barely moving, with a valid onward route, after
+		// a short grace period just advance anyway (a jump nudge helps clear a lip). Ladder
+		// nodes are left alone -- climbing legitimately holds position. [APG]RoboCop[CL]
+		bool bForceAdvance = false;
+
+		if ( !bTouched && !m_currentRoute.empty() && !pWaypoint->hasFlag(CWaypointTypes::W_FL_LADDER) &&
+			(m_pBot->getOrigin() - vWptOrigin).Length2D() < 50.0f && m_pBot->getSpeed() < 16.0f )
+		{
+			if ( m_fParkedAtNodeTime == 0.0f )
+				m_fParkedAtNodeTime = engine->Time() + 1.5f;
+			else if ( engine->Time() >= m_fParkedAtNodeTime )
+				bForceAdvance = true;
+		}
+		else
+			m_fParkedAtNodeTime = 0.0f;
+
+		if ( bForceAdvance )
+		{
+			m_pBot->jump(); // nudge over a small lip/step on the way out
+			bTouched = true;
+			m_fParkedAtNodeTime = 0.0f;
+		}
+
 		if ( bTouched )
 		{
 			const int iWaypointID = CWaypoints::getWaypointIndex(pWaypoint);

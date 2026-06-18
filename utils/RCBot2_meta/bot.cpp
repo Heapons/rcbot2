@@ -1816,7 +1816,26 @@ void CBot::debugBot(char* msg, const std::size_t msgSize)
 	const int currentWaypointID = hasNextPoint ? m_pNavigator->getCurrentWaypointID() : -1;
 	const int currentGoalID = hasNextPoint ? m_pNavigator->getCurrentGoalID() : -1;
 
+	// The actual nearest waypoint to the bot (independent of whether it's navigating) --
+	// tells us at a glance if a "Waypoint:-1" bot is genuinely off the network or just
+	// not routing. Plus the team, to confirm getTeam() reads correctly. [APG]RoboCop[CL]
+	const int iTeam = getTeam();
+	const int iNearestWpt = CWaypointLocations::NearestWaypoint(getOrigin(), CWaypointLocations::REACHABLE_RANGE, -1, true, false, true, nullptr, false, iTeam);
+
 	const CBotSchedule *pCurrentSchedule = (m_pSchedules && !m_pSchedules->isEmpty()) ? m_pSchedules->getCurrentSchedule() : nullptr;
+
+	// Held buttons + move speeds -- decodes the move-slowing keys so a held USE
+	// (or DUCK/WALK) shows at a glance. [APG]RoboCop[CL]
+	char btn_string[160];
+	snprintf(btn_string, sizeof(btn_string), "0x%x [%s%s%s%s%s%s] fwd=%.0f side=%.0f up=%.0f",
+		m_iButtons,
+		(m_iButtons & IN_USE)     ? "USE "    : "",
+		(m_iButtons & IN_DUCK)    ? "DUCK "   : "",
+		(m_iButtons & IN_SPEED)   ? "SPEED "  : "",
+		(m_iButtons & IN_ATTACK)  ? "ATK "    : "",
+		(m_iButtons & IN_FORWARD) ? "FWD "    : "",
+		(m_iButtons & IN_JUMP)    ? "JUMP "   : "",
+		m_fForwardSpeed, m_fSideSpeed, m_fUpSpeed);
 
 	snprintf(msg, msgSize,
 		"Debugging bot: %s\n \
@@ -1826,6 +1845,8 @@ void CBot::debugBot(char* msg, const std::size_t msgSize)
 		Look Task:%s\n \
 		Current Waypoint:%d\n \
 		Current Goal: %d\n \
+		Team: %d  Nearest Wpt: %d\n \
+		Buttons: %s\n \
 		Danger: %0.2f pc\n \
 		Enemy: %s (name = '%s')\n \
 		---CONDITIONS---\n%s",
@@ -1836,6 +1857,9 @@ void CBot::debugBot(char* msg, const std::size_t msgSize)
 		g_szLookTaskToString[m_iLookTask],
 		currentWaypointID,
 		currentGoalID,
+		iTeam,
+		iNearestWpt,
+		btn_string,
 		m_fCurrentDanger / MAX_BELIEF * 100,
 		pEnemy != nullptr ? pEnemy->GetClassName() : "none",
 		p != nullptr ? p->GetName() : "none",
