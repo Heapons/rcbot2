@@ -659,7 +659,76 @@ CBotCommandInline WaypointAutoFix("autofix", CMD_ACCESS_WAYPOINT, [](CClient *pC
 	}
 
 	CWaypoints::autoFix(bFixSentry_Sniper_Defend_TeleExtWpts);
-	
+
+	return COMMAND_ACCESSED;
+});
+
+// Flood-fill from the player's current waypoint following OUTGOING paths: highlights every
+// reachable node (green line, where a debug overlay is available) and reports which FLAG
+// nodes are reachable. Stand on a spawn node and run it -- if the enemy flag prints "NOT
+// reachable", the network is split, and the green region's edge is the gap to bridge.
+// [APG]RoboCop[CL]
+CBotCommandInline WaypointReachableCommand("reachable", CMD_ACCESS_WAYPOINT, [](CClient *pClient, const BotCommandArgs& args)
+{
+	if (pClient == nullptr)
+		return COMMAND_ERROR;
+
+	pClient->updateCurrentWaypoint();
+	const int iStart = pClient->currentWaypoint();
+
+	if (!CWaypoints::validWaypointIndex(iStart))
+	{
+		pClient->giveMessage("Stand on a waypoint first");
+		return COMMAND_ERROR;
+	}
+
+	const int iNum = CWaypoints::numWaypoints();
+	std::vector<bool> visited(static_cast<std::size_t>(iNum), false);
+	std::vector<int> stack; // DFS -- order doesn't matter for reachability
+
+	visited[static_cast<std::size_t>(iStart)] = true;
+	stack.push_back(iStart);
+
+	int iReached = 0;
+
+	while (!stack.empty())
+	{
+		const int iCur = stack.back();
+		stack.pop_back();
+		iReached++;
+
+		CWaypoint *pWpt = CWaypoints::getWaypoint(iCur);
+
+		if (pWpt == nullptr)
+			continue;
+
+		if (debugoverlay != nullptr)
+			debugoverlay->AddLineOverlay(pWpt->getOrigin(), pWpt->getOrigin() + Vector(0, 0, 60), 0, 255, 0, true, 20.0f);
+
+		for (int i = 0; i < pWpt->numPaths(); i++)
+		{
+			const int iSucc = pWpt->getPath(i);
+
+			if (iSucc >= 0 && iSucc < iNum && !visited[static_cast<std::size_t>(iSucc)])
+			{
+				visited[static_cast<std::size_t>(iSucc)] = true;
+				stack.push_back(iSucc);
+			}
+		}
+	}
+
+	CBotGlobals::botMessage(pClient->getPlayer(), 0, "Reachable from wpt %d: %d / %d nodes (green = reachable)", iStart, iReached, iNum);
+
+	// Per-flag reachability -- the decisive bit for CTF connectivity.
+	for (int i = 0; i < iNum; i++)
+	{
+		CWaypoint *pFlagWpt = CWaypoints::getWaypoint(i);
+
+		if (pFlagWpt != nullptr && pFlagWpt->isUsed() && pFlagWpt->hasFlag(CWaypointTypes::W_FL_FLAG))
+			CBotGlobals::botMessage(pClient->getPlayer(), 0, "  flag node %d: %s", i,
+				visited[static_cast<std::size_t>(i)] ? "REACHABLE" : "NOT reachable");
+	}
+
 	return COMMAND_ACCESSED;
 });
 
@@ -689,5 +758,6 @@ CBotSubcommands WaypointSubcommands("waypoint", CMD_ACCESS_DEDICATED, {
 	&WaypointCheckCommand,
 	&WaypointShowVisCommand,
 	&WaypointAutoWaypointCommand,
-	&WaypointAutoFix
+	&WaypointAutoFix,
+	&WaypointReachableCommand
 });
