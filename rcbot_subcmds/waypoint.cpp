@@ -729,6 +729,64 @@ CBotCommandInline WaypointReachableCommand("reachable", CMD_ACCESS_WAYPOINT, [](
 				visited[static_cast<std::size_t>(i)] ? "REACHABLE" : "NOT reachable");
 	}
 
+	// If anything is unreachable, find the closest reachable<->unreachable node pair -- the
+	// best single bridge to add. Draw a RED line at it and report the two ids + distance so
+	// you can teleport over and connect them. [APG]RoboCop[CL]
+	if (iReached < iNum)
+	{
+		float fBestDist = 1.0e9f;
+		int iBestReach = -1;
+		int iBestUnreach = -1;
+
+		// Pickup nodes (ammo/health/armour/resupply) are side-trips reached by detours/jumps,
+		// not the main cross-map route -- never suggest bridging to/from one.
+		constexpr int iPickupMask = CWaypointTypes::W_FL_HEALTH | CWaypointTypes::W_FL_AMMO |
+			CWaypointTypes::W_FL_ARMOR | CWaypointTypes::W_FL_RESUPPLY;
+
+		for (int u = 0; u < iNum; u++)
+		{
+			CWaypoint *pU = CWaypoints::getWaypoint(u);
+
+			if (visited[static_cast<std::size_t>(u)] || pU == nullptr || !pU->isUsed() || pU->hasSomeFlags(iPickupMask))
+				continue;
+
+			for (int r = 0; r < iNum; r++)
+			{
+				CWaypoint *pR = CWaypoints::getWaypoint(r);
+
+				if (!visited[static_cast<std::size_t>(r)] || pR == nullptr || !pR->isUsed() || pR->hasSomeFlags(iPickupMask))
+					continue;
+
+				const float fDist = (pU->getOrigin() - pR->getOrigin()).Length();
+
+				if (fDist >= fBestDist)
+					continue;
+
+				// Only a WALKABLE bridge: skip pairs whose straight line is blocked by a wall
+				// (the "red line through the wall" problem). [APG]RoboCop[CL]
+				if (!CBotGlobals::checkOpensLater(pR->getOrigin(), pU->getOrigin()))
+					continue;
+
+				fBestDist = fDist;
+				iBestReach = r;
+				iBestUnreach = u;
+			}
+		}
+
+		if (iBestReach != -1)
+		{
+			CWaypoint *pR = CWaypoints::getWaypoint(iBestReach);
+			CWaypoint *pU = CWaypoints::getWaypoint(iBestUnreach);
+
+			if (debugoverlay != nullptr && pR != nullptr && pU != nullptr)
+				debugoverlay->AddLineOverlay(pR->getOrigin(), pU->getOrigin(), 255, 0, 0, true, 20.0f);
+
+			CBotGlobals::botMessage(pClient->getPlayer(), 0,
+				"Nearest gap (RED line): reachable %d <-> unreachable %d, %.0f units -- bridge these both ways",
+				iBestReach, iBestUnreach, static_cast<double>(fBestDist));
+		}
+	}
+
 	return COMMAND_ACCESSED;
 });
 
