@@ -591,11 +591,6 @@ void CHLDMBot :: modThink ()
 		setMoveLookPriority(MOVELOOK_MODTHINK);
 	}
 
-	// #57: sprint was effectively dead -- it required danger>=20 AND aux power >90, so the bot
-	// only sprinted at near-full suit power and only when the danger metric spiked (rare). One
-	// brief sprint dropped power below 90 and it never sprinted again. Sprint whenever there's
-	// an enemy (or real danger) and we hold a usable chunk of power. (m_flSuitPower resolves
-	// fine -- nested under m_HL2Local, found by the recursive prop search.) [APG]RoboCop[CL]
 	if ( (hasEnemy() || m_fCurrentDanger >= 20.0f) && CClassInterface::auxPower(m_pEdict) > 30.0f && m_fSprintTime < engine->Time())
 	{
 		m_pButtons->holdButton(IN_SPEED,0,1,0);
