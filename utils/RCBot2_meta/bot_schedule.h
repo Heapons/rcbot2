@@ -251,7 +251,7 @@ public:
 
 	void removeTop ()
 	{
-		CBotSchedule *pSched = m_Schedules.front();
+		const CBotSchedule *pSched = m_Schedules.front();
 		m_Schedules.pop_front();
 
 		delete pSched; // ~CBotSchedule frees its tasks

@@ -3233,7 +3233,7 @@ bool CBots::controlBot(const char* szOldName, const char* szName, const char* sz
 
 bool CBots :: createBot (const char *szClass, const char *szTeam, const char *szName)
 {
-	CBotMod *pMod = CBotGlobals::getCurrentMod(); // used below to parse the team argument [APG]RoboCop[CL]
+	const CBotMod *pMod = CBotGlobals::getCurrentMod(); // used below to parse the team argument [APG]RoboCop[CL]
 	const char *szOVName = ""; // `szOVName` Unused? [APG]RoboCop[CL]
 
 	if ( m_iMaxBots != -1 && CBotGlobals::numPlayersPlaying() >= m_iMaxBots )

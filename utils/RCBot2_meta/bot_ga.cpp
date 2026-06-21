@@ -74,7 +74,7 @@ void CPopulation::freeMemory()
 {
 	// Population owns the individuals it holds — destroy them before clearing.
 	// pick() removes its return value from the vector, so anything still here is owned.
-	for (IIndividual* individual : m_theIndividuals)
+	for (const IIndividual* individual : m_theIndividuals)
 		delete individual;
 
 	m_theIndividuals.clear();

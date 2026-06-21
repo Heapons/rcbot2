@@ -92,7 +92,7 @@ ga_nn_value CPerceptron :: execute ()
 	// bias weight
 	m_output = m_Bias;
 
-	ga_nn_value* w = m_weights;
+	const ga_nn_value* w = m_weights;
 	const ga_nn_value* x = m_inputs;
 
 	for (unsigned short i = 0; i < m_iInputs; i++)
@@ -155,7 +155,7 @@ void CLogisticalNeuron :: train ()// ITransfer *transferFunction, bool usebias )
 ga_nn_value CLogisticalNeuron :: execute ( )//, bool usebias )
 {
 	//m_netinput = 0;
-	ga_nn_value* w = m_weights;
+	const ga_nn_value* w = m_weights;
 	const ga_nn_value* x = m_inputs;
 
 	// bias weight
