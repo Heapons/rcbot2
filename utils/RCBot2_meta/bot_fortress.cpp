@@ -78,6 +78,10 @@
 //caxanga334: SDK 2013 contains macros for std::min and std::max which causes errors when compiling
 //#if SOURCE_ENGINE == SE_SDK2013 || SOURCE_ENGINE == SE_BMS
 #include "valve_minmax_off.h"
+
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
 //#endif
 
 extern IVDebugOverlay *debugoverlay;
@@ -378,6 +382,10 @@ bool CBotTF2 :: sentryRecentlyHadEnemy () const
 
 bool CBotFortress::startGame()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotFortress::startGame", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	const string_t mapname = gpGlobals->mapname;
 
 	const char* szmapname = mapname.ToCStr();
@@ -1350,6 +1358,10 @@ bool CBotTF2 ::thinkSpyIsEnemy(edict_t *pEdict, const TF_Class iDisguise)
 
 bool CBotFortress :: isEnemy ( edict_t *pEdict, bool bCheckWeapons )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotFortress::isEnemy", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	if ( pEdict == m_pEdict )
 		return false;
 
@@ -1428,6 +1440,10 @@ void CBotFortress :: currentlyDead ()
 
 void CBotFortress :: modThink ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotFortress::modThink", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	// get class
 	m_iClass = static_cast<TF_Class>(CClassInterface::getTF2Class(m_pEdict));
 	m_iTeam = getTeam();
@@ -2679,6 +2695,10 @@ void CBotFortress :: callMedic ()
 
 bool CBotTF2 :: canGotoWaypoint (const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::canGotoWaypoint", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	const string_t mapname = gpGlobals->mapname;
 
 	const char* szmapname = mapname.ToCStr();
@@ -3093,6 +3113,10 @@ bool m_classWasForced = false;
 
 void CBotTF2::modThink()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::modThink", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static bool bNeedHealth;
 	static bool bNeedAmmo;
 
@@ -4499,6 +4523,10 @@ bool CBotTF2::healPlayer(edict_t* pPlayer, edict_t* pPrevPlayer)
 // The lower the better
 float CBotTF2 :: getEnemyFactor ( edict_t *pEnemy )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::getEnemyFactor", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	float fPreFactor = 0.0f;
 
 	// Player
@@ -4633,6 +4661,10 @@ void CBotTF2:: teleportedPlayer ()
 
 void CBotTF2 :: getTasks ( unsigned iIgnore )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::getTasks", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static bool bIsUbered;
 	static TF_Class iClass;
 	static int iMetal;
@@ -7142,6 +7174,10 @@ void CBotTF2 :: touchedWpt ( CWaypoint *pWaypoint , const int iNextWaypoint, con
 void CBotTF2::modAim(edict_t* pEntity, Vector& v_origin, Vector* v_desired_offset, Vector& v_size, const float fDist,
 	const float fDist2D)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::modAim", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBotWeapon* pWp;
 	static float fTime;
 
@@ -8008,6 +8044,10 @@ enum : std::int8_t
 
 bool CBotTF2::isEnemy(edict_t* pEdict, const bool bCheckWeapons)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotTF2::isEnemy", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	const string_t mapname = gpGlobals->mapname;
 
 	const char* szmapname = mapname.ToCStr();

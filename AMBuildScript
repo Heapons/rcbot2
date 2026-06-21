@@ -79,6 +79,13 @@ class MMSConfig(object):
       self.configure_cxx(cxx)
     
   def configure_cxx(self, cxx):
+
+    # Valve Profiler
+    # getattr guard: a build cache configured before this option existed has no 'vprof'
+    # attribute, and a plain builder.options.vprof would crash the reparse. Defaults off.
+    if getattr(builder.options, 'vprof', None) == '1':
+      cxx.defines += ['RCBOT_VPROF_ENABLED', 'RAD_TELEMETRY_DISABLED']
+	  
     if cxx.behavior == 'gcc':
       cxx.defines += [
         'HAVE_STDINT_H',

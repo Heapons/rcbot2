@@ -69,6 +69,10 @@
 
 #ifdef SM_EXT
 #include "rcbot/entprops.h"
+
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
 #endif
 
 // SourceHook SH_DECL_HOOK* macros use implicit false-to-int casts and uninitialized orig_ret for void hooks - [APG]RoboCop[CL]
@@ -293,6 +297,10 @@ void RCBotPluginMeta::BroadcastTextMessage(const char* szMessage)
 
 void RCBotPluginMeta::Hook_PlayerRunCmd(CUserCmd *ucmd, IMoveHelper *moveHelper)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("RCBotPluginMeta::Hook_PlayerRunCmd", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBot *pBot;
 
 	CBaseEntity *pPlayer = META_IFACEPTR(CBaseEntity);
@@ -569,6 +577,10 @@ bool RCBotPluginMeta::Load(PluginId id, ISmmAPI *ismm, char *error, std::size_t 
 
 bool RCBotPluginMeta::FireGameEvent(IGameEvent* pevent, bool bDontBroadcast)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("RCBotPluginMeta::FireGameEvent", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	// Skip processing if another plugin already handled/blocked this event - [APG]RoboCop[CL]
 	if (META_RESULT_STATUS >= MRES_OVERRIDE)
 	{
@@ -684,6 +696,10 @@ void RCBotPluginMeta::Hook_ClientCommand(edict_t *pEntity, const CCommand &args)
 void RCBotPluginMeta::Hook_ClientCommand(edict_t *pEntity)
 #endif
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("RCBotPluginMeta::Hook_ClientCommand", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBotMod *pMod = nullptr;
 
 #if SOURCE_ENGINE <= SE_DARKMESSIAH
@@ -818,6 +834,10 @@ void RCBotPluginMeta::Hook_ClientDisconnect(edict_t *pEntity)
 
 void RCBotPluginMeta::Hook_GameFrame(const bool simulating)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("RCBotPluginMeta::Hook_GameFrame", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	/**
 	 * simulating:
 	 * ***********

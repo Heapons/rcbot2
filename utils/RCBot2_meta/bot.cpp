@@ -97,6 +97,10 @@
 #include "valve_minmax_off.h"
 //#endif
 
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
+
 constexpr float DEG_TO_RAD(const float x) { return x * 0.0174533f; }
 constexpr float RAD_TO_DEG(const float x) { return x * 57.29578f; }
 
@@ -424,6 +428,10 @@ bool CBot :: createBotFromEdict(edict_t *pEdict, CBotProfile *pProfile)
 
 bool CBot :: FVisible (const Vector &vOrigin, edict_t *pDest) const
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::FVisible( Vector )", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	//return CBotGlobals::isVisible(m_pEdict,getEyePosition(),vOrigin);
 	// fix bots seeing through gates/doors
 	return CBotGlobals::isVisibleHitAllExceptPlayer(m_pEdict,getEyePosition(),vOrigin,pDest);
@@ -432,6 +440,10 @@ bool CBot :: FVisible (const Vector &vOrigin, edict_t *pDest) const
 
 bool CBot :: FVisible ( edict_t *pEdict, const bool bCheckHead )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::FVisible( edict )", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector eye;
 
 	// use special hit traceline for players so bots dont shoot through things 
@@ -778,6 +790,10 @@ void CBot :: kill () const
 
 void CBot :: think ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::think", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static float fTime;
 	//static bool debug;
 	//static bool battack;
@@ -1297,6 +1313,10 @@ void CBot :: updateConditions ()
 // Called when working out route
 bool CBot::canGotoWaypoint(const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::canGotoWaypoint", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	if (pWaypoint->hasFlag(CWaypointTypes::W_FL_UNREACHABLE))
 		return false;
 	if (!pWaypoint->forTeam(getTeam()))
@@ -2404,6 +2424,10 @@ void CBot :: updateUtilTime (const int util)
 
 Vector CBot::getAimVector ( edict_t *pEntity )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::getAimVector", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector v_desired_offset;
 	static Vector v_origin;
 	static float fSensitivity;
@@ -2489,6 +2513,10 @@ Vector CBot::getAimVector ( edict_t *pEntity )
 
 void CBot::modAim ( edict_t *pEntity, Vector &v_origin, Vector *v_desired_offset, Vector &v_size, const float fDist, float fDist2D )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::modAim", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector vel;
 	static Vector myvel;
 	static Vector enemyvel;
@@ -2923,6 +2951,10 @@ bool CBot :: select_CWeapon ( CWeapon *pWeapon )
 
 void CBot :: doLook ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::doLook", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	// what do we want to look at
 	getLookAtVector();
 
@@ -3272,6 +3304,10 @@ int CBots::createDefaultBot(const char* szName) {
 
 void CBots :: botFunction ( IBotFunction *function )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::botFunction", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	for ( unsigned i = 0; i < RCBOT_MAXPLAYERS; i ++ )
 	{
 		if ( m_Bots[i]->inUse() && m_Bots[i]->getEdict() )
@@ -3372,6 +3408,10 @@ CBot *CBots :: findBotByProfile (const CBotProfile *pProfile)
 
 void CBots :: runPlayerMoveAll ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::runPlayerMoveAll", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBot *pBot;
 	for ( short i = 0; i < RCBOT_MAXPLAYERS; i ++ )
 	{
@@ -3394,6 +3434,10 @@ int CBots::levelInit()
 
 void CBots :: botThink ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::botThink", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBot *pBot;
 
 	const bool bBotStop = bot_stop.GetInt() > 0;
