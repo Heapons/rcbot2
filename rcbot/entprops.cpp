@@ -1993,7 +1993,7 @@ bool CBotEntProp::SetEntPropString(int entity, PropType proptype, const char *pr
 		typedescription_t *td;
 		datamap_t *pMap;
 
-		if ((pMap = sm_gamehelpers->GetDataMap(pEntity)) == NULL)
+		if ((pMap = sm_gamehelpers->GetDataMap(pEntity)) == nullptr)
 		{
 			logger->Log(LogLevel::ERROR, "Could not retrieve datamap for %s", pEdict->GetClassName());
 			return false;
@@ -2072,8 +2072,8 @@ bool CBotEntProp::SetEntPropString(int entity, PropType proptype, const char *pr
 		if (pProp->GetProxyFn())
 		{
 			DVariant var;
-			pProp->GetProxyFn()(pProp, pEntity, (const void *) ((std::intptr_t) pEntity + offset), &var, element, entity);
-			if (var.m_pString == ((string_t *) ((std::intptr_t) pEntity + offset))->ToCStr())
+			pProp->GetProxyFn()(pProp, pEntity, (const void *) (std::intptr_t(pEntity) + offset), &var, element, entity);
+			if (var.m_pString == ((string_t *) (std::intptr_t(pEntity) + offset))->ToCStr())
 			{
 				bIsStringIndex = true;
 			}
@@ -2094,7 +2094,7 @@ bool CBotEntProp::SetEntPropString(int entity, PropType proptype, const char *pr
 
 	if (bIsStringIndex)
 	{
-		*(string_t *) ((std::intptr_t) pEntity + offset) = g_HL2.AllocPooledString(value);
+		*(string_t *) (std::intptr_t(pEntity) + offset) = g_HL2.AllocPooledString(value);
 		len = strlen(value);
 	}
 	else
@@ -2103,7 +2103,7 @@ bool CBotEntProp::SetEntPropString(int entity, PropType proptype, const char *pr
 		len = ke::SafeStrcpy(dest, maxlen, value);
 	}
 
-	if (proptype == Prop_Send && (pEdict != NULL))
+	if (proptype == Prop_Send && (pEdict != nullptr))
 	{
 		g_HL2.SetEdictStateChanged(pEdict, offset);
 	}

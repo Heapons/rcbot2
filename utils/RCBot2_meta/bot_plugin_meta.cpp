@@ -677,11 +677,11 @@ void* RCBotPluginMeta::OnMetamodQuery(const char* iface, int *ret) {
 		BindToSourcemod();
 	}
 	
-	if (ret != NULL) {
+	if (ret != nullptr) {
 		*ret = IFACE_OK;
 	}
 	
-	return NULL;
+	return nullptr;
 }
 #endif
 
