@@ -86,6 +86,8 @@ SH_DECL_HOOK2_void(IServerGameClients, ClientPutInServer, SH_NOATTRIB, 0, edict_
 SH_DECL_HOOK1_void(IServerGameClients, SetCommandClient, SH_NOATTRIB, 0, int);
 SH_DECL_HOOK5(IServerGameClients, ClientConnect, SH_NOATTRIB, 0, bool, edict_t *, const char*, const char *, char *, int);
 SH_DECL_HOOK2(IGameEventManager2, FireEvent, SH_NOATTRIB, 0, bool, IGameEvent *, bool);
+SH_DECL_HOOK2(IVEngineServer, UserMessageBegin, SH_NOATTRIB, 0, bf_write *, IRecipientFilter *, int);
+SH_DECL_HOOK0_void(IVEngineServer, MessageEnd, SH_NOATTRIB, 0);
 
 #if SOURCE_ENGINE >= SE_ORANGEBOX
 SH_DECL_HOOK2_void(IServerGameClients, NetworkIDValidated, SH_NOATTRIB, 0, const char *, const char *);
@@ -295,6 +297,62 @@ void RCBotPluginMeta::BroadcastTextMessage(const char* szMessage)
 	}
 }
 
+bf_write *RCBotPluginMeta::Hook_UserMessageBegin(IRecipientFilter *pFilter, int iMsgType)
+{
+	// Resolve the message index once (-2 = looked up and not present, so we stop searching).
+	if (m_iSetPlayerLocationMsg == -1)
+	{
+		m_iSetPlayerLocationMsg = -2;
+
+		int iId = 0;
+		char szName[64];
+		int iSize = 0;
+
+		while (servergamedll->GetUserMessageInfo(iId, szName, sizeof(szName) - 1, iSize))
+		{
+			if (std::strcmp(szName, "SetPlayerLocation") == 0)
+			{
+				m_iSetPlayerLocationMsg = iId;
+				break;
+			}
+
+			iId++;
+		}
+	}
+
+	if (iMsgType == m_iSetPlayerLocationMsg && pFilter != nullptr && pFilter->GetRecipientCount() > 0)
+	{
+		m_iPendingLocationRecipient = pFilter->GetRecipientIndex(0); // player entindex
+		m_pPendingLocationBuf = META_RESULT_ORIG_RET(bf_write *);    // buffer FF writes the name into
+	}
+
+	RETURN_META_VALUE(MRES_IGNORED, nullptr);
+}
+
+void RCBotPluginMeta::Hook_MessageEnd()
+{
+	if (m_iPendingLocationRecipient > 0 && m_pPendingLocationBuf != nullptr)
+	{
+		bf_read read(m_pPendingLocationBuf->GetData(), m_pPendingLocationBuf->GetNumBytesWritten());
+
+		char szLocation[128];
+		read.ReadString(szLocation, sizeof(szLocation));
+
+		const int iSlot = m_iPendingLocationRecipient - 1; // entindex -> 0-based client slot
+
+		if (iSlot >= 0 && iSlot < RCBOT_MAXPLAYERS)
+		{
+			if (CClient *pClient = CClients::get(iSlot))
+				pClient->setLocation(szLocation);
+		}
+	}
+
+	m_iPendingLocationRecipient = -1;
+	m_pPendingLocationBuf = nullptr;
+
+	RETURN_META(MRES_IGNORED);
+}
+
 void RCBotPluginMeta::Hook_PlayerRunCmd(CUserCmd *ucmd, IMoveHelper *moveHelper)
 {
 #ifdef RCBOT_VPROF_ENABLED
@@ -397,6 +455,8 @@ bool RCBotPluginMeta::Load(PluginId id, ISmmAPI *ismm, char *error, std::size_t 
 	SH_ADD_HOOK_MEMFUNC(IServerGameClients, ClientCommand, gameclients, this, &RCBotPluginMeta::Hook_ClientCommand, false);
 	//Hook FireEvent to our function - unstable for TF2? [APG]RoboCop[CL]
 	SH_ADD_HOOK_MEMFUNC(IGameEventManager2, FireEvent, gameevents, this, &RCBotPluginMeta::FireGameEvent, false);
+	SH_ADD_HOOK_MEMFUNC(IVEngineServer, UserMessageBegin, engine, this, &RCBotPluginMeta::Hook_UserMessageBegin, true);
+	SH_ADD_HOOK_MEMFUNC(IVEngineServer, MessageEnd, engine, this, &RCBotPluginMeta::Hook_MessageEnd, false);
 
 #if SOURCE_ENGINE >= SE_ORANGEBOX
 	g_pCVar = icvar;
@@ -615,6 +675,8 @@ bool RCBotPluginMeta::Unload(char *error, std::size_t maxlen)
 	SH_REMOVE_HOOK_MEMFUNC(IServerGameClients, ClientCommand, gameclients, this, &RCBotPluginMeta::Hook_ClientCommand, false);
 	// Unhook the FireEvent hook to avoid potential crashes during plugin unload and for dod_broadcast_audio? [APG]RoboCop[CL]
 	SH_REMOVE_HOOK_MEMFUNC(IGameEventManager2, FireEvent, gameevents, this, &RCBotPluginMeta::FireGameEvent, false);
+	SH_REMOVE_HOOK_MEMFUNC(IVEngineServer, UserMessageBegin, engine, this, &RCBotPluginMeta::Hook_UserMessageBegin, true);
+	SH_REMOVE_HOOK_MEMFUNC(IVEngineServer, MessageEnd, engine, this, &RCBotPluginMeta::Hook_MessageEnd, false);
 
 	//SH_REMOVE_MANUALHOOK(MHook_PlayerRunCmd, player_vtable, SH_STATIC(Hook_Function2), false);
 
