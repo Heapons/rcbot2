@@ -113,6 +113,7 @@ private:
 
 	edict_t* m_pCarryingObject = nullptr; // using grav gun
 	float m_fCachedNormSpeed = 0.0f; // hl2_normspeed cvar value cache -caxanga334
+	float m_fCachedSprintSpeed = 0.0f; // hl2_sprintspeed cache; sprint needs the higher requested move speed, not just IN_SPEED [APG]RoboCop[CL]
 };
 
 #endif
