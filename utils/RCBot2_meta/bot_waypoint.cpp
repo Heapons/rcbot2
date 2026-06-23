@@ -1300,8 +1300,6 @@ void CWaypointNavigator :: updatePosition ()
 	VPROF_BUDGET("CWaypointNavigator::updatePosition", "RCBot2")
 #endif // RCBOT_VPROF_ENABLED
 
-	Vector vWptOrigin;
-	QAngle aim;
 	Vector vaim;
 
 	float fPrevBelief = 0.0f;
@@ -1322,10 +1320,10 @@ void CWaypointNavigator :: updatePosition ()
 		return;
 	}
 
-	aim = QAngle(0,pWaypoint->getAimYaw(),0);
+	const QAngle aim = QAngle(0, pWaypoint->getAimYaw(), 0);
 	AngleVectors(aim,&vaim);
 
-	vWptOrigin = pWaypoint->getOrigin();
+	const Vector vWptOrigin = pWaypoint->getOrigin();
 
 	if ( !m_bWorkingRoute )
 	{
