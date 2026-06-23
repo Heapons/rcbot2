@@ -662,7 +662,10 @@ CBotCommandInline DebugMemoryScanCommand("memoryscan", CMD_ACCESS_DEBUG, [](cons
 		else if (m_size == MEMSEARCH_INT)
 			bfound = (ivalue == *reinterpret_cast<int*>(mempoint));
 		else if (m_size == MEMSEARCH_FLOAT)
-			bfound = (fvalue == *reinterpret_cast<float*>(mempoint));
+		{
+			const float memf = *reinterpret_cast<float*>(mempoint);
+			bfound = (memf >= fvalue - 0.001f && memf <= fvalue + 0.001f);
+		}
 		else if (m_size == MEMSEARCH_STRING)
 		{
 			try
