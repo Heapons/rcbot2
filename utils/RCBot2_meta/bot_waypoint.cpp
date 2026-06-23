@@ -700,8 +700,7 @@ void CWaypointNavigator :: belief (const Vector& vOrigin, const Vector& vOther, 
 		{
 			if ( m_fBelief[iWptIndex] < MAX_BELIEF )
 				m_fBelief[iWptIndex] += fStrength / (vOrigin-pWpt->getOrigin()).Length()*fBelief*0.5f;
-			if ( m_fBelief[iWptIndex] > MAX_BELIEF )
-				m_fBelief[iWptIndex] = MAX_BELIEF;
+			m_fBelief[iWptIndex] = std::min(m_fBelief[iWptIndex], MAX_BELIEF);
 
 			//debugoverlay->AddTextOverlayRGB(pWpt->getOrigin(),1,5.0f,255,0,0,200,"Danger INV %0.2f",m_fBelief[iWptIndex]);
 		}
