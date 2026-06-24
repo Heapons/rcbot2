@@ -606,9 +606,6 @@ void CHLDMBot :: modThink ()
 	if ( (hasEnemy() || m_fCurrentDanger >= 20.0f) && CClassInterface::auxPower(m_pEdict) > 30.0f && m_fSprintTime < engine->Time())
 	{
 		m_pButtons->holdButton(IN_SPEED,0,1,0);
-		// #57: pressing IN_SPEED alone does nothing -- the engine clamps our forwardmove to the
-		// speed we REQUEST, and we were still requesting normspeed (~190). Raise the requested
-		// move speed to the sprint speed (~320) so we actually run. [APG]RoboCop[CL]
 		m_fIdealMoveSpeed = m_fCachedSprintSpeed;
 	}
 	else if (m_fCurrentDanger < 1 || CClassInterface::auxPower(m_pEdict) < 5.0f)

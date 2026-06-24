@@ -216,7 +216,9 @@ bool CWaypointVisibilityTable::ReadFromFile(const int numwaypoints) const
 		return false;
 	}
 
-	std::memcpy(&header, pBuf, sizeof(wpt_vis_header_t));
+	// pBuf is malloc'd as totalSize = sizeof(wpt_vis_header_t) + the visibility payload, so copying
+	// out just the header is in-bounds. V1086's "underflow" is a false positive. [APG]RoboCop[CL]
+	std::memcpy(&header, pBuf, sizeof(wpt_vis_header_t)); //-V1086
 
 	if (header.numwaypoints != numwaypoints ||
 		header.waypoint_version != CWaypoints::WAYPOINT_VERSION ||

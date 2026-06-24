@@ -341,10 +341,7 @@ void RCBotPluginMeta::Hook_MessageEnd()
 		const int iSlot = m_iPendingLocationRecipient - 1; // entindex -> 0-based client slot
 
 		if (iSlot >= 0 && iSlot < RCBOT_MAXPLAYERS)
-		{
-			if (CClient *pClient = CClients::get(iSlot))
-				pClient->setLocation(szLocation);
-		}
+			CClients::get(iSlot)->setLocation(szLocation);
 	}
 
 	m_iPendingLocationRecipient = -1;

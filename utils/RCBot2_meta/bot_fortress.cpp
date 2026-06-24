@@ -1210,7 +1210,7 @@ int CBotFortress :: engiBuildObject (int *iState, const eEngiBuild iObject, floa
 		break;
 	case 3:
 		{
-			tapButton(IN_ATTACK2);
+			tapButton(IN_ATTACK2); //-V1037 identical tap states (5/7) are a deliberate per-frame rotation sequence
 			*iState = *iState + 1;
 			m_fWaitTurnSentry = engine->Time() + 0.33f;
 			*fTime = *fTime + 0.33f;

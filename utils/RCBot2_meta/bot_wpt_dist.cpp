@@ -42,7 +42,9 @@ void CWaypointDistances::load()
 			return;
 		}
 
-		std::memcpy(&hdr, pBuf, sizeof(wpt_dist_hdr_t));
+		// pBuf is malloc'd as totalSize = sizeof(wpt_dist_hdr_t) + sizeof(m_Distances), so copying
+		// out just the header is in-bounds. V1086's "underflow" is a false positive. [APG]RoboCop[CL]
+		std::memcpy(&hdr, pBuf, sizeof(wpt_dist_hdr_t)); //-V1086
 
 		if ((hdr.maxwaypoints == CWaypoints::MAX_WAYPOINTS) && (hdr.numwaypoints == CWaypoints::numWaypoints()) && (hdr.version == WPT_DIST_VER))
 		{

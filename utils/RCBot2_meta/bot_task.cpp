@@ -106,7 +106,7 @@ void getGrenadeAngle(double v, double g, double desx, double desy, float* fa1, f
 		return;
 	}
 
-	*fa1 = static_cast<float>(std::atan2(topplus, bottom));
+	*fa1 = static_cast<float>(std::atan2(topplus, bottom)); //-V537 shared denominator is correct
 	*fa2 = static_cast<float>(std::atan2(topminus, bottom));
 
 	*fa1 = RAD2DEG(*fa1);
@@ -212,7 +212,7 @@ void CBotTF2MedicHeal::execute(CBot *pBot,CBotSchedule *pSchedule)
 	}
 	else if ( pBot->getCurrentWeapon()->getWeaponInfo()->getID() != TF2_WEAPON_MEDIGUN )
 	{
-		pBot->select_CWeapon( CWeapons::getWeapon(TF2_WEAPON_MEDIGUN) );
+		(void)pBot->select_CWeapon( CWeapons::getWeapon(TF2_WEAPON_MEDIGUN) ); // best-effort switch
 	}
 	else 
 	{

@@ -429,7 +429,7 @@ void CClient :: think ()
 		}
 
 
-		if ( m_pDebugBot!= nullptr && isDebugOn(BOT_DEBUG_HUD) )
+		if ( p != nullptr && m_pDebugBot!= nullptr && isDebugOn(BOT_DEBUG_HUD) )
 		{
 			if ( m_fNextPrintDebugInfo < engine->Time() )
 			{

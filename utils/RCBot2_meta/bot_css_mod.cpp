@@ -211,7 +211,7 @@ void CCounterStrikeSourceMod::onFreezeTimeEnd()
 
 		if(pBot && pBot->inUse())
         {
-            pBot->select_CWeapon(CWeapons::getWeapon(CS_WEAPON_KNIFE));
+            (void)pBot->select_CWeapon(CWeapons::getWeapon(CS_WEAPON_KNIFE)); // best-effort switch
         }
 	}
 }
