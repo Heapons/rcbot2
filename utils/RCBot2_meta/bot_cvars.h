@@ -10,7 +10,7 @@ extern ConVar rcbot_ff_grenades;
 extern ConVar rcbot_ff_grenade_cook;
 extern ConVar rcbot_ff_grenade_chance;
 extern ConVar rcbot_ff_sniper_charge;
-extern ConVar rcbot_ff_ranged_strafe;
+extern ConVar rcbot_ranged_strafe;
 extern ConVar rcbot_melee_fallback_dist;
 extern ConVar bot_cmd_enable_wpt_sounds;
 //extern ConVar bot_general_difficulty;
