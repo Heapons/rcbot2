@@ -19,6 +19,10 @@ rcbot_defrate 0.2
 # Smaller number will make bots turn slower (1 = instant turn but may overshoot)
 rcbot_anglespeed 0.25
 #
+# Bots strafe side-to-side during ranged firefights to be harder to hit (0 = stand still)
+# Not applied to Counter-Strike (recoil widens with movement)
+rcbot_ranged_strafe 1
+#
 # Radius in units for bots to avoid things
 rcbot_avoid_radius 80
 #
