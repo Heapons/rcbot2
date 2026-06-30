@@ -43,20 +43,23 @@
 #define PLATFORM_EXT ".dll"
 #define vsnprintf _vsnprintf
 #define PATH_SEP_CHAR "\\"
+#define RCBOT_STRICMP _stricmp
 #include <Windows.h>
 #else
 #define DLL_EXPORT extern "C" __attribute__((visibility("default")))
 #define openlib(lib) dlopen(lib, RTLD_NOW)
 #define closelib(lib) dlclose(lib)
 #define findsym(lib, sym) dlsym(lib, sym)
-#if defined __linux__
+#ifdef __linux__
 #define PLATFORM_EXT ".so"
 #elif defined __APPLE__
 #define PLATFORM_EXT ".dylib"
 #endif
 typedef void* HINSTANCE;
 #define PATH_SEP_CHAR "/"
+#define RCBOT_STRICMP strcasecmp
 #include <dlfcn.h>
+#include <strings.h> // strcasecmp
 #endif
 
 #if defined(_WIN64) || defined(__x86_64__) || defined(__amd64__)
@@ -357,7 +360,10 @@ DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, co
 				filename = FILENAME_1_6_SDK2013;
 #endif
 			}
-			else if (std::strcmp(gamedir, "FortressForever") == 0
+			// FF's game folder is "FortressForever" on Windows but "fortressforever" on Linux
+			// dedicated servers, so match case-insensitively or the Linux dir falls through to
+			// "Unsupported". [APG]RoboCop[CL]
+			else if (RCBOT_STRICMP(gamedir, "FortressForever") == 0
 				 || std::strcmp(gamedir, "synergy") == 0)
 			{
 				filename = FILENAME_1_6_SDK2013;
