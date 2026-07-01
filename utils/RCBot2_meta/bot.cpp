@@ -2362,6 +2362,15 @@ void CBot :: doMove ()
 			m_fSideSpeed = 0.0f;
 		}
 
+		// Mount assist required to prevent bots getting stuck [APG]RoboCop[CL]
+		if ( m_pNavigator->nextPointIsOnLadder() && !onLadder() )
+		{
+			if ( m_pButtons->canPressButton(IN_USE) )
+				m_pButtons->tap(IN_USE);
+
+			m_fForwardSpeed = m_fIdealMoveSpeed; // drive into the ladder to grab it
+		}
+
 		if ( isUnderWater() || onLadder() )
 		{
 			if ( m_vMoveTo.z > getOrigin().z + 32.0f )

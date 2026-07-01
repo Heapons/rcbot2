@@ -1345,11 +1345,16 @@ void CWaypointNavigator :: updatePosition ()
 		// nodes are left alone -- climbing legitimately holds position. [APG]RoboCop[CL]
 		bool bForceAdvance = false;
 
-		if ( !bTouched && !m_currentRoute.empty() && !pWaypoint->hasFlag(CWaypointTypes::W_FL_LADDER) &&
+		// Mount assist required to prevent bots getting stuck [APG]RoboCop[CL]
+		const bool bLadderNode = pWaypoint->hasFlag(CWaypointTypes::W_FL_LADDER);
+		const bool bOnLadderNow = CClassInterface::isMoveType(m_pBot->getEdict(), MOVETYPE_LADDER);
+		const float fParkGrace = bLadderNode ? 4.0f : 1.5f;
+
+		if ( !bTouched && !(bLadderNode && bOnLadderNow) && !m_pBot->isPlacingBuilding() &&
 			(m_pBot->getOrigin() - vWptOrigin).Length2D() < 50.0f && m_pBot->getSpeed() < 16.0f )
 		{
-			if ( m_fParkedAtNodeTime == 0.0f )
-				m_fParkedAtNodeTime = engine->Time() + 1.5f;
+			if ( m_fParkedAtNodeTime <= 0.0f )
+				m_fParkedAtNodeTime = engine->Time() + fParkGrace;
 			else if ( engine->Time() >= m_fParkedAtNodeTime )
 				bForceAdvance = true;
 		}
