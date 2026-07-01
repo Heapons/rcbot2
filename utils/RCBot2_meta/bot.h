@@ -706,8 +706,10 @@ public:
 
 	virtual bool canGotoWaypoint (const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev = nullptr);
 
-	// True while the bot is placing a buildable (e.g. an engineer's sentry). The navigator's
-	// stuck-recovery checks this so it won't jump/force-advance the bot off the spot. [APG]RoboCop[CL]
+// True while the bot is in the middle of placing a buildable (e.g. an engineer's sentry).
+// The navigator's stuck-recovery checks this so it won't jump/force-advance the bot off the
+// spot mid-placement (moving too far or leaving the ground can cancel the build). Named
+// distinctly from CBotFortress::isBuilding(edict) ("is this entity a building"). [APG]RoboCop[CL]
 	virtual bool isPlacingBuilding () { return false; }
 
 	void updatePosition() const;
@@ -967,7 +969,6 @@ protected:
 	// Moved here from CBotFF so doRangedStrafe() can serve FF/TF2/HL2DM. [APG]RoboCop[CL]
 	float m_fMeleeStrafeTime = 0.0f;
 	bool m_bMeleeStrafeLeft = false;
-
 	float m_fLastSeeEnemy;
 	float m_fLastUpdateLastSeeEnemy;
 
@@ -994,6 +995,7 @@ protected:
 	IPlayerInfo *m_pPlayerInfo; //-- sensors
 	IBotController *m_pController; //-- actuators
 	CBotCmd cmd; // actuator command
+	bool m_bLoggedFFRunCmd = false; // [FF-DIAG] one-time confirmation log [APG]RoboCop[CL]
 	////////////////////////////////////
 	MyEHandle m_pEnemy; // current enemy
 	MyEHandle m_pOldEnemy;
