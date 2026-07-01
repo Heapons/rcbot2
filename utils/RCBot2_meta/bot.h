@@ -339,6 +339,14 @@ public:
 		return m_iDesiredClass == iClass;
 	}
 
+	// The class this bot has just decided to become (set by chooseClass before the joinclass command
+	// is even issued). Lets another bot picking on the same frame see this one's pending pick and avoid
+	// duplicating it. [APG]RoboCop[CL]
+	int getDesiredClass () const
+	{
+		return m_iDesiredClass;
+	}
+
 	virtual void handleWeapons ();
 
     Vector getOrigin () const
@@ -430,6 +438,17 @@ public:
 	}
 
 	virtual bool handleAttack ( CBotWeapon *pWeapon, edict_t *pEnemy );
+
+	// Ranged-combat strafe: juke side-to-side during a firefight so we're a harder target. Shared by
+	// the mods that want it (FF/TF2/HL2DM call this from their handleAttack; NOT Counter-Strike, whose
+	// recoil widens with movement). Self-gating: only ranged weapons, a real enemy, not carrying an
+	// objective, not point-blank, and only onto solid ground (no juking off ledges / into water).
+	// cvar rcbot_ranged_strafe. [APG]RoboCop[CL]
+	void doRangedStrafe (const CBotWeapon *pWeapon, edict_t *pEnemy );
+
+	// True when the bot is carrying a map objective (the flag) it should run home rather than dance
+	// with. Base bots (HL2DM etc.) carry nothing; CBotFortress overrides to report flag carriage.
+	virtual bool isCarryingObjective () { return false; }
 
 	float DotProductFromOrigin (const Vector& pOrigin ) const;
 
@@ -686,7 +705,13 @@ public:
     CBotProfile *getProfile () const { return m_pProfile; }
 
 	virtual bool canGotoWaypoint (const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev = nullptr);
-	
+
+	// True while the bot is in the middle of placing a buildable (e.g. an engineer's sentry).
+	// The navigator's stuck-recovery checks this so it won't jump/force-advance the bot off the
+	// spot mid-placement (moving too far or leaving the ground can cancel the build). Named
+	// distinctly from CBotFortress::isBuilding(edict) ("is this entity a building"). [APG]RoboCop[CL]
+	virtual bool isPlacingBuilding () { return false; }
+
 	void updatePosition() const;
 
 	void tapButton ( int iButton ) const;
@@ -940,6 +965,10 @@ protected:
 	float m_fNextUpdateStuckConstants;
 
 	float m_fStrafeTime;
+	// Combat strafe (melee flank arc + ranged juke -- mutually exclusive, so they share one timer/side).
+	// Moved here from CBotFF so doRangedStrafe() can serve FF/TF2/HL2DM. [APG]RoboCop[CL]
+	float m_fMeleeStrafeTime = 0.0f;
+	bool m_bMeleeStrafeLeft = false;
 	float m_fLastSeeEnemy;
 	float m_fLastUpdateLastSeeEnemy;
 
@@ -966,6 +995,7 @@ protected:
 	IPlayerInfo *m_pPlayerInfo; //-- sensors
 	IBotController *m_pController; //-- actuators
 	CBotCmd cmd; // actuator command
+	bool m_bLoggedFFRunCmd = false; // [FF-DIAG] one-time confirmation log [APG]RoboCop[CL]
 	////////////////////////////////////
 	MyEHandle m_pEnemy; // current enemy
 	MyEHandle m_pOldEnemy;
