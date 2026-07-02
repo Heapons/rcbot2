@@ -344,8 +344,12 @@ bool CDODBot :: startGame ()
 	// not the correct class? and desired class is valid?
 	if ( (m_iDesiredClass >= 0) && (m_iDesiredClass <= 5) && (m_iDesiredClass != CClassInterface::getPlayerClassDOD(m_pEdict)) )
 	{
-		kill();
-		changeClass();
+		// Sanity check: Prevent spamming joinclass every frame [APG]RoboCop[CL]
+		if ( m_fChangeClassTime < engine->Time() )
+		{
+			kill();
+			changeClass();
+		}
 
 		return false;
 	}
