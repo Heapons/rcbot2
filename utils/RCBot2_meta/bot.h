@@ -339,9 +339,7 @@ public:
 		return m_iDesiredClass == iClass;
 	}
 
-	// The class this bot has just decided to become (set by chooseClass before the joinclass command
-	// is even issued). Lets another bot picking on the same frame see this one's pending pick and avoid
-	// duplicating it. [APG]RoboCop[CL]
+	// Pending class choice (set before joinclass). Lets other bots avoid duplicating picks. [APG]RoboCop[CL]
 	int getDesiredClass () const
 	{
 		return m_iDesiredClass;
@@ -439,15 +437,11 @@ public:
 
 	virtual bool handleAttack ( CBotWeapon *pWeapon, edict_t *pEnemy );
 
-	// Ranged-combat strafe: juke side-to-side during a firefight so we're a harder target. Shared by
-	// the mods that want it (FF/TF2/HL2DM call this from their handleAttack; NOT Counter-Strike, whose
-	// recoil widens with movement). Self-gating: only ranged weapons, a real enemy, not carrying an
-	// objective, not point-blank, and only onto solid ground (no juking off ledges / into water).
-	// cvar rcbot_ranged_strafe. [APG]RoboCop[CL]
+	// Juke side-to-side during ranged combat. Self-gating: ranged weapons only, real enemy, not
+	// carrying objective, not point-blank, solid ground only. cvar: rcbot_ranged_strafe. [APG]RoboCop[CL]
 	void doRangedStrafe (const CBotWeapon *pWeapon, edict_t *pEnemy );
 
-	// True when the bot is carrying a map objective (the flag) it should run home rather than dance
-	// with. Base bots (HL2DM etc.) carry nothing; CBotFortress overrides to report flag carriage.
+	// True when bot is carrying an objective. Base bots return false; CBotFortress overrides. [APG]RoboCop[CL]
 	virtual bool isCarryingObjective () { return false; }
 
 	float DotProductFromOrigin (const Vector& pOrigin ) const;
@@ -706,10 +700,8 @@ public:
 
 	virtual bool canGotoWaypoint (const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev = nullptr);
 
-// True while the bot is in the middle of placing a buildable (e.g. an engineer's sentry).
-// The navigator's stuck-recovery checks this so it won't jump/force-advance the bot off the
-// spot mid-placement (moving too far or leaving the ground can cancel the build). Named
-// distinctly from CBotFortress::isBuilding(edict) ("is this entity a building"). [APG]RoboCop[CL]
+	// True while bot is placing a buildable. Navigator's stuck-recovery checks this to avoid interrupting placement.
+	// Distinct from CBotFortress::isBuilding() (entity is a building). [APG]RoboCop[CL]
 	virtual bool isPlacingBuilding () { return false; }
 
 	void updatePosition() const;
@@ -965,8 +957,8 @@ protected:
 	float m_fNextUpdateStuckConstants;
 
 	float m_fStrafeTime;
-	// Combat strafe (melee flank arc + ranged juke -- mutually exclusive, so they share one timer/side).
-	// Moved here from CBotFF so doRangedStrafe() can serve FF/TF2/HL2DM. [APG]RoboCop[CL]
+	// Combat strafe timer (melee flank and ranged juke share it).
+	// Moved from CBotFF to support FF/TF2/HL2DM in doRangedStrafe(). [APG]RoboCop[CL]
 	float m_fMeleeStrafeTime = 0.0f;
 	bool m_bMeleeStrafeLeft = false;
 	float m_fLastSeeEnemy;
