@@ -703,6 +703,11 @@ CBotWeapon* CBotWeapons::getBestWeapon(edict_t* pEnemy, const bool bAllowMelee, 
 		{
 			if (pWeapon->outOfAmmo(m_pBot))
 				continue;
+
+			// FF: Skip empty-clip launchers (can't fire, leaves bot reload-locked) to prefer loaded weapons.
+			// Only FF + explosive launchers (not TF2 one-rocket reload). [APG]RoboCop[CL]
+			if (CBotGlobals::isMod(MOD_FF) && pWeapon->isExplosive() && pWeapon->clipEmptyWithReserve(m_pBot))
+				continue;
 		}
 
 		if (!pWeapon->canAttack())

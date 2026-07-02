@@ -815,6 +815,12 @@ public:
 		return 0;
 	}
 
+	// Clip empty but has reserve ammo; can't fire until reloaded. Skips reload-locked state. [APG]RoboCop[CL]
+	bool clipEmptyWithReserve(const CBot* pBot) const
+	{
+		return m_iClip1 != nullptr && *m_iClip1 == 0 && getAmmo(pBot) > 0;
+	}
+
 	CWeapon* getWeaponInfo() const { return m_pWeaponInfo; }
 
 	int getWeaponIndex() const { return m_iWeaponIndex; }
