@@ -7724,7 +7724,9 @@ bool CBotTF2 :: handleAttack ( CBotWeapon *pWeapon, edict_t *pEnemy )
 				m_pButtons->letGo(IN_ATTACK);
 			}
 		}
-		else if (m_iClass == TF_CLASS_SNIPER && pWeapon->getWeaponInfo() && pWeapon->getWeaponInfo()->getSlot() == 0  && ((!m_pWeapons->hasWeapon(TF2_WEAPON_BOW)) || !(m_pWeapons->getCurrentWeaponInSlot(0)->isProjectile())))
+		else if (m_iClass == TF_CLASS_SNIPER && m_pWeapons != nullptr && pWeapon->getWeaponInfo() && pWeapon->getWeaponInfo()->getSlot() == 0 &&
+			((!m_pWeapons->hasWeapon(TF2_WEAPON_BOW)) || m_pWeapons->getCurrentWeaponInSlot(0) == nullptr ||
+				!(m_pWeapons->getCurrentWeaponInSlot(0)->isProjectile())))
 		{
 			//stopMoving();
 
