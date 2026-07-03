@@ -16,11 +16,12 @@ ConVar rcbot_tf2_medic_letgotime("rcbot_tf2_medic_letgotime", "0.5", 0, "Time fo
 ConVar rcbot_tf2_pyro_airblast("rcbot_tf2_pyro_airblast_ammo", "50", 0, "Ammo must be above this to airblast -- if 200 airblast will be disabled");
 ConVar rcbot_projectile_tweak("rcbot_projtweak", "0.05", 0, "Tweaks the bots knowledge of projectiles and gravity");
 
-// Fortress Forever hand-grenade tossing (primary frag). [APG]RoboCop[CL]
+// Fortress Forever [APG]RoboCop[CL]
 ConVar rcbot_ff_grenades("rcbot_ff_grenades", "1", 0, "Fortress Forever bots throw primary (frag) hand grenades at enemies");
 ConVar rcbot_ff_grenade_cook("rcbot_ff_grenade_cook", "1.8", 0, "FF bot grenade cook/hold time (s) before throwing; clamped 0.6..3.0 (fuse is 3.81s)");
 ConVar rcbot_ff_grenade_chance("rcbot_ff_grenade_chance", "0.5", 0, "Chance 0..1 an FF bot throws a grenade when a valid opportunity arises");
 ConVar rcbot_ff_sniper_charge("rcbot_ff_sniper_charge", "2.0", 0, "FF sniper-rifle charge/hold time (s) before the shot is released; clamped 0.5..5.0 (full charge is 5.0s)");
+
 ConVar rcbot_ranged_strafe("rcbot_ranged_strafe", "1", 0, "FF/TF2/HL2DM bots strafe side-to-side during ranged firefights to be harder to hit (0 = stand still). Not applied to Counter-Strike (recoil widens with movement).");
 ConVar rcbot_melee_fallback_dist("rcbot_melee_fallback_dist", "150", 0, "Max distance a bot charges to melee when it has no usable ranged weapon (lower = less melee-rushing)");
 
