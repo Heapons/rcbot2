@@ -921,6 +921,10 @@ bool CWaypointNavigator :: workRoute (const Vector& vFrom,
 			// don't ignore this time
 			m_iCurrentWaypoint = CWaypointLocations::NearestWaypoint(vFrom,CWaypointLocations::REACHABLE_RANGE,-1,true,false,true, nullptr,false,m_pBot->getTeam(),false,false,Vector(0,0,0),0,m_pBot->getEdict());
 
+			// DoDS idle spawn fix [APG]RoboCop[CL]
+			if ( m_iCurrentWaypoint == -1 )
+				m_iCurrentWaypoint = CWaypointLocations::NearestWaypoint(vFrom,4096.0f,-1,false,false,true, nullptr,false,m_pBot->getTeam());
+
 			if ( m_iCurrentWaypoint == -1 )
 			{
 				*bFail = true;
