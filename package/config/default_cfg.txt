@@ -69,7 +69,7 @@ rcbot_voice_cmds 1
 rcbot_notarget 0
 #
 # Max distance a bot charges to melee when it has no usable ranged weapon (lower = less melee-rushing)
-rcbot_melee_fallback_dist 200 
+rcbot_melee_fallback_dist 150 
 #
 # Distance for autowaypoints to be placed - useful for adding waypoints
 rcbot_autowpt_dist 150.0

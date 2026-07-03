@@ -22,12 +22,7 @@ ConVar rcbot_ff_grenade_cook("rcbot_ff_grenade_cook", "1.8", 0, "FF bot grenade 
 ConVar rcbot_ff_grenade_chance("rcbot_ff_grenade_chance", "0.5", 0, "Chance 0..1 an FF bot throws a grenade when a valid opportunity arises");
 ConVar rcbot_ff_sniper_charge("rcbot_ff_sniper_charge", "2.0", 0, "FF sniper-rifle charge/hold time (s) before the shot is released; clamped 0.5..5.0 (full charge is 5.0s)");
 ConVar rcbot_ranged_strafe("rcbot_ranged_strafe", "1", 0, "FF/TF2/HL2DM bots strafe side-to-side during ranged firefights to be harder to hit (0 = stand still). Not applied to Counter-Strike (recoil widens with movement).");
-
-// Max distance (units) a bot will charge to melee when it has NO usable ranged
-// weapon (out of ammo / none whose range covers the gap). Default 400 preserves
-// prior behaviour; lower it to stop bots suicide-charging to melee from intermediate
-// range (try ~150-200 for FF). [APG]RoboCop[CL]
-ConVar rcbot_melee_fallback_dist("rcbot_melee_fallback_dist", "200", 0, "Max distance a bot charges to melee when it has no usable ranged weapon (lower = less melee-rushing)");
+ConVar rcbot_melee_fallback_dist("rcbot_melee_fallback_dist", "150", 0, "Max distance a bot charges to melee when it has no usable ranged weapon (lower = less melee-rushing)");
 
 ConVar bot_cmd_enable_wpt_sounds("rcbot_enable_wpt_sounds", "1", 0, "Enable/disable sound effects when editing waypoints");
 //ConVar bot_general_difficulty("rcbot_skill", "0.8", 0, "General difficulty of the bots. 0.5 = stock, < 0.5 easier, > 0.5 = harder");//TODO: Broken! [APG]RoboCop[CL]
@@ -157,10 +152,10 @@ void RCBOT2_Cvar_setup(ICvar* cvar) //'cvar' hides global declaration from /publ
     }
 
     std::string sv_tags = svTagsVar->GetString();
-    if (sv_tags.find(BOT_TAG) == std::string::npos)
+    if (sv_tags.find("rcbot") == std::string::npos)
     {
         sv_tags += ",";
-        sv_tags += BOT_TAG;
+        sv_tags += "rcbot";
         svTagsVar->SetValue(sv_tags.c_str());
     }
 }
