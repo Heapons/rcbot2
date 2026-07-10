@@ -46,9 +46,26 @@ CBotProfile *CBotProfiles :: m_pDefaultProfile = nullptr;
 CBotProfile :: CBotProfile (const CBotProfile &other)
 {
 	*this = other;
+}
+
+CBotProfile &CBotProfile :: operator= (const CBotProfile &other)
+{
+	if (this == &other)
+		return *this;
+
+	m_iTeam = other.m_iTeam;
+	m_iVisionTicks = other.m_iVisionTicks;
+	m_iPathTicks = other.m_iPathTicks;
+	m_iClass = other.m_iClass;
+	m_iVisionTicksClients = other.m_iVisionTicksClients;
+	m_iSensitivity = other.m_iSensitivity;
+	m_fBraveness = other.m_fBraveness;
+	m_fAimSkill = other.m_fAimSkill;
 
 	m_szName = CStrings::getString(other.m_szName);
 	m_szModel = CStrings::getString(other.m_szModel);
+
+	return *this;
 }
 
 CBotProfile :: CBotProfile (
@@ -101,9 +118,9 @@ void CBotProfiles :: setupProfiles ()
 		CBotVisibles::DEFAULT_MAX_TICKS, // vis ticks
 		IBotNavigator::MAX_PATH_TICKS, // path ticks
 		10, // visrevs clients
-		8, // sensitivity
+		10, // sensitivity
 		0.7f, // braveness
-		0.85f, // aim skill
+		0.8f, // aim skill
 		-1 // class
 		);	
 
@@ -197,9 +214,9 @@ CBotProfile* CBotProfiles::getRandomFreeProfile()
 // return first unused bot, concidering teams if they're unequal
 CBotProfile* CBotProfiles::getChosenFreeProfile()
 {
-	int team = 0;
-	int teamA = CBotGlobals::numPlayersOnTeam(2,false);
-	int teamB = CBotGlobals::numPlayersOnTeam(3,false);
+	int team;
+	const int teamA = CBotGlobals::numPlayersOnTeam(2,false);
+	const int teamB = CBotGlobals::numPlayersOnTeam(3,false);
 
 	if (teamA < teamB) {
 		team = 2;

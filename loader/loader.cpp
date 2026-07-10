@@ -43,20 +43,23 @@
 #define PLATFORM_EXT ".dll"
 #define vsnprintf _vsnprintf
 #define PATH_SEP_CHAR "\\"
+#define RCBOT_STRICMP _stricmp
 #include <Windows.h>
 #else
 #define DLL_EXPORT extern "C" __attribute__((visibility("default")))
 #define openlib(lib) dlopen(lib, RTLD_NOW)
 #define closelib(lib) dlclose(lib)
 #define findsym(lib, sym) dlsym(lib, sym)
-#if defined __linux__
+#ifdef __linux__
 #define PLATFORM_EXT ".so"
 #elif defined __APPLE__
 #define PLATFORM_EXT ".dylib"
 #endif
 typedef void* HINSTANCE;
 #define PATH_SEP_CHAR "/"
+#define RCBOT_STRICMP strcasecmp
 #include <dlfcn.h>
+#include <strings.h> // strcasecmp
 #endif
 
 #if defined(_WIN64) || defined(__x86_64__) || defined(__amd64__)
@@ -91,8 +94,33 @@ constexpr int METAMOD_API_MAJOR = 2;
 
 HINSTANCE g_hCore = nullptr;
 bool load_attempted = false;
+char g_szLogPath[512] = {};
 
 std::size_t UTIL_Format(char *buffer, std::size_t maxlength, const char *fmt, ...);
+
+static void LogToFile(const char* fmt, ...)
+{
+	FILE* fp = nullptr;
+	if (g_szLogPath[0])
+		fp = std::fopen(g_szLogPath, "a");
+	if (!fp)
+		fp = stderr;
+
+	// Buffer for formatted output
+	constexpr size_t BUFFER_SIZE = 1024;
+	char buffer[BUFFER_SIZE];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(buffer, BUFFER_SIZE, fmt, ap);
+	va_end(ap);
+
+	// Write the formatted string to the file
+	std::fputs(buffer, fp);
+
+	if (fp != stderr)
+		std::fclose(fp);
+}
 
 class FailPlugin : public SourceMM::ISmmFailPlugin
 {
@@ -135,15 +163,17 @@ std::size_t UTIL_Format(char *buffer, const std::size_t maxlength, const char *f
 METAMOD_PLUGIN* _GetPluginPtr(const char* path, const int fail_api)
 {
 	METAMOD_FN_ORIG_LOAD fn;
-	METAMOD_PLUGIN* pl = nullptr; // Declare and initialize `pl` at the top [APG]RoboCop[CL]
+	METAMOD_PLUGIN* pl; // Declare `pl` at the top [APG]RoboCop[CL]
 	int ret;
+
+	LogToFile( "[RCBot2] Loader: opening library: %s\n", path);
 
 	if (!((g_hCore = openlib(path))))
 	{
 #if defined __linux__ || defined __APPLE__
 		UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer), "%s", dlerror());
 #else
-		DWORD err = GetLastError();
+		const DWORD err = GetLastError();
 
 		if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), s_FailPlugin.error_buffer,
@@ -154,6 +184,7 @@ METAMOD_PLUGIN* _GetPluginPtr(const char* path, const int fail_api)
 		}
 #endif
 
+		LogToFile( "[RCBot2] Loader: FAILED to open: %s\n", s_FailPlugin.error_buffer);
 		s_FailPlugin.fail_version = fail_api;
 
 		return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
@@ -161,31 +192,65 @@ METAMOD_PLUGIN* _GetPluginPtr(const char* path, const int fail_api)
 
 	if (!((fn = reinterpret_cast<METAMOD_FN_ORIG_LOAD>(findsym(g_hCore, "CreateInterface")))))
 	{
-		goto error;
+		UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+			"Could not find CreateInterface in: %s", path);
+		LogToFile( "[RCBot2] Loader: %s\n", s_FailPlugin.error_buffer);
+		closelib(g_hCore);
+		g_hCore = nullptr;
+		s_FailPlugin.fail_version = fail_api;
+		return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 	}
+
 	pl = static_cast<METAMOD_PLUGIN*>(fn(METAMOD_PLAPI_NAME, &ret));
+
 	if (!pl)
 	{
-		goto error;
+		UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+			"CreateInterface returned null for %s in: %s", METAMOD_PLAPI_NAME, path);
+		LogToFile( "[RCBot2] Loader: %s\n", s_FailPlugin.error_buffer);
+		closelib(g_hCore);
+		g_hCore = nullptr;
+		s_FailPlugin.fail_version = fail_api;
+		return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 	}
 
 	return pl;
-error:
-	closelib(g_hCore);
-	g_hCore = nullptr;
-	return nullptr;
 }
 
 
 DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, const MetamodLoaderInfo* mli)
 {
-	const char* filename = nullptr;
+	const char* filename;
 
 	load_attempted = true;
 
+	// Set up file-based log path in the rcbot2/ folder (parent of bin/) - [APG]RoboCop[CL]
+	if (mli->pl_path && mli->pl_path[0])
+	{
+		char parentPath[512];
+		UTIL_Format(parentPath, sizeof(parentPath), "%s", mli->pl_path);
+		char* pLastSep = nullptr;
+		for (char* p = parentPath; *p; p++)
+		{
+			if (*p == '/' || *p == '\\')
+				pLastSep = p;
+		}
+		if (pLastSep)
+			*(pLastSep + 1) = '\0';
+		else
+			UTIL_Format(parentPath, sizeof(parentPath), "%s" PATH_SEP_CHAR, mli->pl_path);
+		UTIL_Format(g_szLogPath, sizeof(g_szLogPath), "%srcbot2_loader.log", parentPath);
+	}
+
+	LogToFile( "[RCBot2] Loader: source_engine=%d, api_major=%d, pl_path=%s\n",
+		mvi->source_engine, mvi->api_major, mli->pl_path ? mli->pl_path : "(null)");
+
 	if (mvi->api_major > METAMOD_API_MAJOR)
 	{
-		return nullptr;
+		UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+			"Metamod API major version %d is newer than supported (%d)", mvi->api_major, METAMOD_API_MAJOR);
+		s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+		return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 	}
 
 	switch (mvi->source_engine)
@@ -214,7 +279,7 @@ DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, co
 		case SOURCE_ENGINE_LEFT4DEAD2:
 		{
 			const char* gamedir = mvi->GetGameDir();
-			if (strcmp(gamedir, "nucleardawn") == 0)
+			if (std::strcmp(gamedir, "nucleardawn") == 0)
 			{
 				filename = FILENAME_1_6_ND;
 			}
@@ -276,15 +341,55 @@ DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, co
 		}
 		case SOURCE_ENGINE_SDK2013:
 		{
-			filename = FILENAME_1_6_SDK2013;
+			const char* gamedir = mvi->GetGameDir();
+			LogToFile( "[RCBot2] Loader: SDK2013 gamedir=%s\n", gamedir ? gamedir : "(null)");
+			if (gamedir == nullptr)
+			{
+				UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+					"SDK2013: GetGameDir() returned null");
+				s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+				return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
+			}
+			if (std::strcmp(gamedir, "tf2classified") == 0)
+			{
+				// TF2 Classified uses SDK2013 engine with TF2 gameplay. [APG]RoboCop[CL]
+				// On x86_64 there is no SDK2013 binary...yet, use the TF2 binary instead.
+#if defined(_WIN64) || defined(__x86_64__) || defined(__amd64__)
+				filename = FILENAME_1_6_TF2;
+#else
+				filename = FILENAME_1_6_SDK2013;
+#endif
+			}
+			// FF's game folder is "FortressForever" on Windows but "fortressforever" on Linux
+			// dedicated servers, so match case-insensitively or the Linux dir falls through to
+			// "Unsupported". [APG]RoboCop[CL]
+			else if (RCBOT_STRICMP(gamedir, "FortressForever") == 0
+				 || std::strcmp(gamedir, "synergy") == 0)
+			{
+				filename = FILENAME_1_6_SDK2013;
+			}
+			else
+			{
+				UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+					"Unsupported SDK2013 game: %s", gamedir);
+				s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+				return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
+			}
 			break;
 		}
 		case SOURCE_ENGINE_BMS:
 		{
 			const char* gamedir = mvi->GetGameDir();
-			if (strcmp(gamedir, "bms") == 0)
+			if (std::strcmp(gamedir, "bms") == 0)
 			{
 				filename = FILENAME_1_6_BMS;
+			}
+			else
+			{
+				UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+					"Unsupported BMS game directory: %s", gamedir ? gamedir : "(null)");
+				s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+				return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 			}
 			break;
 		}
@@ -296,21 +401,24 @@ DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, co
 		case SOURCE_ENGINE_ORANGEBOXVALVE_DEPRECATED:
 		{
 			const char* gamedir = mvi->GetGameDir();
-			if (strcmp(gamedir, "tf") == 0)
+			if (std::strcmp(gamedir, "tf") == 0)
 			{
 				filename = FILENAME_1_6_TF2;
 			}
-			else if (strcmp(gamedir, "dod") == 0)
+			else if (std::strcmp(gamedir, "dod") == 0)
 			{
 				filename = FILENAME_1_6_DODS;
 			}
-			else if (strcmp(gamedir, "hl2mp") == 0)
+			else if (std::strcmp(gamedir, "hl2mp") == 0)
 			{
 				filename = FILENAME_1_6_HL2DM;
 			}
 			else
 			{
-				return nullptr;
+				UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+					"Unsupported OrangeBox game: %s", gamedir ? gamedir : "(null)");
+				s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+				return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 			}
 			break;
 		}
@@ -331,12 +439,18 @@ DLL_EXPORT METAMOD_PLUGIN* CreateInterface_MMS(const MetamodVersionInfo* mvi, co
 		}
 		default:
 		{
-			return nullptr;
+			UTIL_Format(s_FailPlugin.error_buffer, sizeof(s_FailPlugin.error_buffer),
+			"Unknown source engine id: %d", mvi->source_engine);
+			LogToFile( "[RCBot2] Loader: %s\n", s_FailPlugin.error_buffer);
+			s_FailPlugin.fail_version = METAMOD_FAIL_API_V2;
+			return reinterpret_cast<METAMOD_PLUGIN*>(&s_FailPlugin);
 		}
 	}
 
 	char abspath[256];
 	UTIL_Format(abspath, sizeof(abspath), "%s" PATH_SEP_CHAR "%s", mli->pl_path, filename);
+
+	LogToFile( "[RCBot2] Loader: resolved filename=%s, full path=%s\n", filename, abspath);
 
 	return _GetPluginPtr(abspath, METAMOD_FAIL_API_V2);
 }

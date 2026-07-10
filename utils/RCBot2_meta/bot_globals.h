@@ -65,13 +65,11 @@ public:
 
 	static QAngle playerAngles ( edict_t *pPlayer );
 
-	static bool isPlayer (const edict_t* pEdict)
+	static bool isPlayer(const edict_t* pEdict)
 	{
-		static int index;
+		const int index = ENTINDEX(pEdict);
 
-		index = ENTINDEX(pEdict);
-
-		return index>0&&index<=gpGlobals->maxClients;
+		return index > 0 && index <= gpGlobals->maxClients;
 	}
 
 	static bool walkableFromTo (edict_t *pPlayer, const Vector& v_src, const Vector& v_dest);
@@ -123,7 +121,7 @@ public:
 
 	static edict_t *findPlayerByTruncName ( const char *name );
 
-// linux fix
+	// linux fix
 	static CBotMod *getCurrentMod ()
 	{
 		return m_pCurrentMod;
@@ -172,9 +170,22 @@ public:
 	static float quickTraceline ( edict_t *pIgnore, const Vector& vSrc, const Vector& vDest ); // return fFraction
 	static bool traceVisible (edict_t *pEnt);
 	////////
-	static Vector entityOrigin ( edict_t *pEntity ) 
-	{ 
-		return pEntity->GetIServerEntity()->GetCollideable()->GetCollisionOrigin(); 
+	static Vector entityOrigin ( edict_t *pEntity )
+	{
+		if (pEntity == nullptr)
+			return Vector();
+
+		IServerEntity *pServerEnt = pEntity->GetIServerEntity();
+
+		if (pServerEnt == nullptr)
+			return Vector();
+
+		const ICollideable *pCollide = pServerEnt->GetCollideable();
+
+		if (pCollide == nullptr)
+			return Vector();
+
+		return pCollide->GetCollisionOrigin();
 	}
 	static int getTeam ( edict_t *pEntity );
 	static bool entityIsAlive ( edict_t *pEntity );
@@ -201,15 +212,15 @@ public:
 
 	static edict_t *playerByUserId(int iUserId);
 
-	static bool isCurrentMod ( eModId modid ); //TODO: not implemented? [APG]RoboCop[CL]
+	static bool isCurrentMod (eModId modid); //TODO: not implemented? [APG]RoboCop[CL]
 
-	static bool checkOpensLater (const Vector& vSrc, const Vector& vDest );
+	static bool checkOpensLater (const Vector& vSrc, const Vector& vDest);
 
-	static bool setupMapTime ( ) { return m_fMapStartTime == 0.0f; }
+	static bool setupMapTime() { return m_fMapStartTime <= 0.0f; }
 
-	static bool isBreakableOpen ( edict_t *pBreakable );
+	static bool isBreakableOpen (edict_t *pBreakable);
 
-	static Vector getVelocity (const edict_t *pPlayer );
+	static Vector getVelocity (const edict_t *pPlayer);
 
 	static bool isBoundsDefinedInEntitySpace(edict_t* pEntity)
 	{

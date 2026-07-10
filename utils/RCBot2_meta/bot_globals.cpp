@@ -61,6 +61,10 @@
 //caxanga334: SDK 2013 contains macros for std::min and std::max which causes errors when compiling
 //#if SOURCE_ENGINE == SE_SDK2013 || SOURCE_ENGINE == SE_BMS
 #include "valve_minmax_off.h"
+
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
 //#endif
 
 extern IServerGameEnts *servergameents;
@@ -257,7 +261,7 @@ bool CBotGlobals::dirExists(const char *path)
 
 void CBotGlobals::readRCBotFolder()
 {
-	std::unique_ptr<KeyValues, void(*)(KeyValues*)> mainkv(new KeyValues("Metamod Plugin"), [](KeyValues* kv) { kv->deleteThis(); });
+	const std::unique_ptr<KeyValues, void(*)(KeyValues*)> mainkv(new KeyValues("Metamod Plugin"), [](KeyValues* kv) { kv->deleteThis(); });
 
 	if (mainkv->LoadFromFile(filesystem, "addons/metamod/rcbot2.vdf", "MOD")) {
 		char folder[256] = "\0";
@@ -354,7 +358,7 @@ edict_t *CBotGlobals :: findPlayerByTruncName ( const char *name )
 	return nullptr;
 }
 
-class CTraceFilterHitAllExceptPlayers : public CTraceFilter
+class CTraceFilterHitAllExceptPlayers : public CTraceFilter //unused class? [APG]RoboCop[CL]
 {
 public:
 	virtual ~CTraceFilterHitAllExceptPlayers() = default;
@@ -376,10 +380,7 @@ public:
 	CTraceFilterSimple( const IHandleEntity *passentity1, const IHandleEntity *passentity2, const int collisionGroup )
 	{
 		m_pPassEnt1 = passentity1;
-		
-		if ( passentity2 )
-			m_pPassEnt2 = passentity2;
-
+		m_pPassEnt2 = passentity2;
 		m_collisionGroup = collisionGroup;
 	}
 
@@ -414,6 +415,10 @@ private:
 
 bool CBotGlobals :: checkOpensLater (const Vector& vSrc, const Vector& vDest)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBotGlobals::checkOpensLater", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	CTraceFilterSimple traceFilter(nullptr, nullptr, MASK_PLAYERSOLID );
 
 	traceLine (vSrc,vDest,MASK_PLAYERSOLID,&traceFilter);
@@ -479,7 +484,7 @@ bool CBotGlobals :: isVisible (const Vector& vSrc, const Vector& vDest)
 void CBotGlobals :: traceLine (const Vector& vSrc, const Vector& vDest, const unsigned mask, ITraceFilter *pFilter)
 {
 	Ray_t ray;
-	std::memset(&m_TraceResult,0,sizeof(trace_t));
+	m_TraceResult = trace_t{};
 	ray.Init( vSrc, vDest );
 	enginetrace->TraceRay( ray, mask, pFilter, &m_TraceResult );
 }
@@ -489,7 +494,7 @@ float CBotGlobals :: quickTraceline (edict_t *pIgnore, const Vector& vSrc, const
 	CTraceFilterVis filter = CTraceFilterVis(pIgnore);
 
 	Ray_t ray;
-	std::memset(&m_TraceResult,0,sizeof(trace_t));
+	m_TraceResult = trace_t{};
 	ray.Init( vSrc, vDest );
 	enginetrace->TraceRay( ray, MASK_NPCSOLID_BRUSHONLY, &filter, &m_TraceResult );
 	return m_TraceResult.fraction;
@@ -583,8 +588,10 @@ bool CBotGlobals :: gameStart ()
 	
 	m_szModFolder = CStrings::getString(&szGameFolder[pos]);
 
+	logger->Log(LogLevel::INFO, "Game directory detected as: \"%s\"", m_szModFolder);
+
 	CBotMods::readMods();
-	
+
 	m_pCurrentMod = CBotMods::getMod(m_szModFolder);
 
 	if ( m_pCurrentMod != nullptr)
@@ -640,7 +647,7 @@ int CBotGlobals :: countTeamMatesNearOrigin (const Vector& vOrigin, const float 
 int CBotGlobals :: numClients ()
 {
 	int iCount = 0;
-	int iIndex = 0;
+	int iIndex = 0; //Unused? [APG]RoboCop[CL]
 
 	for ( int i = 1; i <= CBotGlobals::maxClients(); i ++ )
 	{
@@ -854,7 +861,7 @@ bool CBotGlobals :: walkableFromTo (edict_t *pPlayer, const Vector& v_src, const
 					v_norm = v_norm/std::sqrt(v_norm.LengthSqr());
 
 					for (int iDistCheck = 0; static_cast<float>(iDistCheck) * 45 < fDistance; ++iDistCheck) {
-						float fDistCheck = static_cast<float>(iDistCheck) * 45.0f;
+						const float fDistCheck = static_cast<float>(iDistCheck) * 45.0f;
 					
 						Vector v_checkpoint = v_src + v_norm * fDistCheck;
 
@@ -1051,10 +1058,8 @@ bool CBotGlobals :: isBreakableOpen ( edict_t *pBreakable )
 
 Vector CBotGlobals:: getVelocity (const edict_t *pPlayer)
 {
-	if ( CClient *pClient = CClients::get(pPlayer) )
-		return pClient->getVelocity();
-
-	return {0,0,0};
+	CClient *pClient = CClients::get(pPlayer);
+	return pClient->getVelocity();
 }
 
 /**
@@ -1148,9 +1153,9 @@ void CBotGlobals :: buildFileName ( char *szOutput, const char *szFile, const ch
 		szOutput[0] = 0;
 
 #if defined(HOMEFOLDER) && defined(__linux__)
-		char *lhome = getenv ("HOME");
+		const char *lhome = getenv ("HOME");
 
-		if (lhome != NULL) 
+		if (lhome != nullptr) 
 		{
 			std::strncpy(home,lhome,511);
 			home[511] = 0; 

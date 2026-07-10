@@ -67,19 +67,13 @@ class CNeuron
 public:
 	CNeuron ();
 
-	CNeuron (unsigned short int iInputs); //TODO: not implemented? [APG]RoboCop[CL]
-
 	virtual ~CNeuron() { /*if ( m_inputs )*/ delete[] m_inputs; /*if ( m_weights )*/ delete[] m_weights; }
-
-	void setWeights ( ga_nn_value *weights ); //TODO: not implemented? [APG]RoboCop[CL]
 
 	virtual void input ( ga_nn_value *inputs );
 
 	ga_nn_value getWeight (const unsigned short int i) const { return m_weights[i]; }
 
-	virtual ga_nn_value execute (); //TODO: not implemented? [APG]RoboCop[CL]
-
-	static bool fired (); //TODO: experimental [APG]RoboCop[CL]
+	virtual ga_nn_value execute ();
 
 	virtual ga_nn_value getOutput () const { return m_output; }
 
@@ -302,17 +296,19 @@ public:
 	~CBotNeuralNet ()
 	{
 		//if ( m_pOutputs )
-			delete [] m_pOutputs;
+			delete[] m_pOutputs;
 		//if ( m_transferFunction )
 		//	delete m_transferFunction;
+
 		if ( m_pHidden )
 		{
-			for ( unsigned short int i = 0; i < m_numHiddenLayers; i ++ )
-				delete [] m_pHidden[i];
+			for (unsigned short int i = 0; i < m_numHiddenLayers; i++)
+				delete[] m_pHidden[i];
+			delete[] m_pHidden;
 		}
 
-		delete m_layerinput;
-		delete m_layeroutput;
+		delete[] m_layerinput;
+		delete[] m_layeroutput;
 	}
 
 

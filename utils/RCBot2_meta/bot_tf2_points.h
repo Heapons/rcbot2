@@ -7,6 +7,7 @@
 #include "bot_ehandle.h"
 #include "edict.h"
 #include "ehandle.h"
+#include <dt_common.h>
 #include "shareddefs.h"
 #include "utlmap.h"
 
@@ -426,18 +427,18 @@ public:
 			iszOverlay = NULL_STRING;
 			iPlayersRequired = 0;
 			iTimedPoints = 0;
-			// Initialize the raw array using a loop
-			for (string_t& i : iszPreviousPoint)
+			// Initialize the raw array using a loop no longer needed? [APG]RoboCop[CL]
+			/*for (string_t& i : iszPreviousPoint)
 			{
 				i = NULL_STRING;
-			}
+			}*/
 			iTeamPoseParam = 0;
 		}
 		string_t	iszCapSound;
 		string_t	iszModel;
 		string_t	iszIcon;
 		string_t	iszOverlay;
-		string_t	iszPreviousPoint[MAX_PREVIOUS_POINTS];
+		string_t	iszPreviousPoint[MAX_PREVIOUS_POINTS]{};
 
 		int			iModelBodygroup;
 		int			iTeamPoseParam;

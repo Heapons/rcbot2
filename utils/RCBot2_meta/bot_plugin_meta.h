@@ -49,6 +49,7 @@
 #include <iplayerinfo.h>
 #include <sh_vector.h>
 #include "engine_wrappers.h"
+#include <dt_common.h>
 #include <shareddefs.h>
 
 #ifdef SM_EXT
@@ -57,6 +58,8 @@
 
 class CUserCmd;
 class IMoveHelper;
+class bf_write;
+class IRecipientFilter;
 
 #if defined(_WIN64) || defined(_WIN32) && !defined snprintf
 #define snprintf _snprintf
@@ -99,6 +102,13 @@ public:
 
 	static void HudTextMessage(const edict_t *pEntity, const char *szMessage);
 	static void BroadcastTextMessage(const char *szMessage);
+
+	bf_write *Hook_UserMessageBegin(IRecipientFilter *pFilter, int iMsgType);
+	void Hook_MessageEnd();
+
+	int m_iSetPlayerLocationMsg = -1;     // cached "SetPlayerLocation" usermessage index (-1 = unknown)
+	int m_iPendingLocationRecipient = -1; // entindex of an in-flight SetPlayerLocation message
+	bf_write *m_pPendingLocationBuf = nullptr; // its buffer, read at MessageEnd
 
 #if SOURCE_ENGINE >= SE_ORANGEBOX
 	void Hook_ClientCommand(edict_t *pEntity, const CCommand &args);

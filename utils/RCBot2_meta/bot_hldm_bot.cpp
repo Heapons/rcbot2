@@ -146,7 +146,7 @@ void CHLDMBot :: spawnInit ()
 	m_fUseButtonTime = 0.0f;
 	m_fUseCrateTime = 0.0f;
 
-	ConVarRef hl2_normspeed("hl2_normspeed");
+	const ConVarRef hl2_normspeed("hl2_normspeed");
 
 	if (!hl2_normspeed.IsValid())
 	{
@@ -156,6 +156,18 @@ void CHLDMBot :: spawnInit ()
 	else
 	{
 		m_fCachedNormSpeed = hl2_normspeed.GetFloat();
+	}
+
+	const ConVarRef hl2_sprintspeed("hl2_sprintspeed");
+
+	if (!hl2_sprintspeed.IsValid())
+	{
+		logger->Log(LogLevel::ERROR, "Unable to find \"hl2_sprintspeed\" ConVar!");
+		m_fCachedSprintSpeed = 320.0f; // hl2_sprintspeed default value - [APG]RoboCop[CL]
+	}
+	else
+	{
+		m_fCachedSprintSpeed = hl2_sprintspeed.GetFloat();
 	}
 }
 
@@ -214,8 +226,6 @@ bool CHLDMBot :: executeAction (const eBotAction iAction)
 	case BOT_UTIL_HL2DM_USE_CRATE:
 		// check if it is worth it first
 		{
-			const CBotWeapon *pWeapon = nullptr;
-
 			/*
 			possible models
 			0000000000111111111122222222223333
@@ -226,37 +236,42 @@ bool CHLDMBot :: executeAction (const eBotAction iAction)
 			models/items/ammocrate_smg1.mdl
 			*/
 
-			const char* szModel = m_pAmmoCrate.get()->GetIServerEntity()->GetModelName().ToCStr();
-			const char type = szModel[23];
+			edict_t *pAmmoCrate = m_pAmmoCrate.get();
+			IServerEntity *pAmmoServerEnt = pAmmoCrate != nullptr ? pAmmoCrate->GetIServerEntity() : nullptr;
+			if (pAmmoServerEnt != nullptr)
+			{
+				const CBotWeapon *pWeapon = nullptr;
+				const char* szModel = pAmmoServerEnt->GetModelName().ToCStr();
+				const char type = szModel[23];
 
-			if ( type == 'a' ) // ar2
-			{
-				pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_AR2));
-			}
-			else if ( type == 'g' ) // grenade
-			{
-				pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_FRAG));
-			}
-			else if ( type == 'r' ) // rocket
-			{
-				pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_RPG));
-			}
-			else if ( type == 's' ) // smg
-			{
-				pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_SMG1));
-			}
+				if (type == 'a') // ar2
+				{
+					pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_AR2));
+				}
+				else if (type == 'g') // grenade
+				{
+					pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_FRAG));
+				}
+				else if (type == 'r') // rocket
+				{
+					pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_RPG));
+				}
+				else if (type == 's') // smg
+				{
+					pWeapon = m_pWeapons->getWeapon(CWeapons::getWeapon(HL2DM_WEAPON_SMG1));
+				}
+				if (pWeapon && pWeapon->getAmmo(this) < 1)
+				{
+					CBotSchedule* pSched = new CBotSchedule();
 
-			if ( pWeapon && pWeapon->getAmmo(this) < 1 )
-			{
-				CBotSchedule *pSched = new CBotSchedule();
-				
-				pSched->addTask(new CFindPathTask(m_pAmmoCrate));
-				pSched->addTask(new CBotHL2DMUseButton(m_pAmmoCrate));
+					pSched->addTask(new CFindPathTask(m_pAmmoCrate));
+					pSched->addTask(new CBotHL2DMUseButton(m_pAmmoCrate));
 
-				m_pSchedules->add(pSched);
+					m_pSchedules->add(pSched);
 
-				m_fUtilTimes[iAction] = engine->Time() + randomFloat(5.0f,10.0f);
-				return true;
+					m_fUtilTimes[iAction] = engine->Time() + randomFloat(5.0f, 10.0f);
+					return true;
+				}
 			}
 		}
 		return false;
@@ -349,8 +364,8 @@ bool CHLDMBot :: executeAction (const eBotAction iAction)
 				m_pSchedules->add(pSched);
 				return true;
 			}
-
 		}
+		break;
 	case BOT_UTIL_SNIPE:
 		{
 			// roam
@@ -518,17 +533,16 @@ void CHLDMBot :: getTasks (unsigned iIgnore)
 		}
 	}
 
-	if ( m_pNearbyWeapon.get() )
+	if (const edict_t *nearbyWeapon = m_pNearbyWeapon.get())
 	{
 		static CWeapon *pWeapon;
-		pWeapon = CWeapons::getWeapon(m_pNearbyWeapon.get()->GetClassName());
+		pWeapon = CWeapons::getWeapon(nearbyWeapon->GetClassName());
 
-		if ( pWeapon && !m_pWeapons->hasWeapon(pWeapon->getID()) )
+		if (pWeapon && !m_pWeapons->hasWeapon(pWeapon->getID()))
 		{
-			ADD_UTILITY(BOT_UTIL_PICKUP_WEAPON, true , 0.6f + pWeapon->getPreference()*0.1f)
+			ADD_UTILITY(BOT_UTIL_PICKUP_WEAPON, true, 0.6f + static_cast<float>(pWeapon->getPreference()) * 0.1f)
 		}
 	}
-
 
 	utils.execute();
 
@@ -589,9 +603,10 @@ void CHLDMBot :: modThink ()
 		setMoveLookPriority(MOVELOOK_MODTHINK);
 	}
 
-	if ( m_fCurrentDanger >= 20.0f && CClassInterface::auxPower(m_pEdict) > 90.0f && m_fSprintTime < engine->Time())
+	if ( (hasEnemy() || m_fCurrentDanger >= 20.0f) && CClassInterface::auxPower(m_pEdict) > 30.0f && m_fSprintTime < engine->Time())
 	{
 		m_pButtons->holdButton(IN_SPEED,0,1,0);
+		m_fIdealMoveSpeed = m_fCachedSprintSpeed;
 	}
 	else if (m_fCurrentDanger < 1 || CClassInterface::auxPower(m_pEdict) < 5.0f)
 	{

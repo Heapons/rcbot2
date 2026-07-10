@@ -43,6 +43,7 @@
 #include <cstdint>
 //#include "cbase.h"
 //#include "baseentity.h"
+#include <dt_common.h>
 #include "toolframework/itoolentity.h"
 #include "filesystem.h"
 #include "interface.h"
@@ -79,6 +80,7 @@ class CBasePlayer; // forward declaration required by imovehelper.h (included by
 
 constexpr int MAX_VOICE_CMDS = 32;
 constexpr float MIN_WPT_TOUCH_DIST = 16.0f;
+constexpr float INFINITE_DISTANCE = 1e30f;
 
 // Interfaces from the engine
 extern IVEngineServer *engine;  // helper functions (messaging clients, loading content, making entities, running commands, etc)
@@ -337,6 +339,12 @@ public:
 		return m_iDesiredClass == iClass;
 	}
 
+	// Pending class choice (set before joinclass). Lets other bots avoid duplicating picks. [APG]RoboCop[CL]
+	int getDesiredClass () const
+	{
+		return m_iDesiredClass;
+	}
+
 	virtual void handleWeapons ();
 
     Vector getOrigin () const
@@ -350,9 +358,18 @@ public:
 		return (vOrigin - m_pController->GetLocalOrigin()).Length();
 	}
 
-    float distanceFrom(edict_t *pEntity) const
-    {
-		return (pEntity->GetCollideable()->GetCollisionOrigin() - m_pController->GetLocalOrigin()).Length();
+	float distanceFrom(edict_t* pEntity) const
+	{
+		if (!pEntity)
+		{
+			return INFINITE_DISTANCE; // Use the named constant
+		}
+
+		const ICollideable *pCollide = pEntity->GetCollideable();
+		if (pCollide == nullptr)
+			return INFINITE_DISTANCE;
+
+		return (pCollide->GetCollisionOrigin() - m_pController->GetLocalOrigin()).Length();
 		//return distanceFrom(CBotGlobals::entityOrigin(pEntity));
 	}
 	float distanceFrom2D(const Vector& vOrigin) const
@@ -362,7 +379,14 @@ public:
 
     float distanceFrom2D(edict_t *pEntity) const
     {
-		return (pEntity->GetCollideable()->GetCollisionOrigin() - m_pController->GetLocalOrigin()).Length2D();
+		if (pEntity == nullptr)
+			return 0.0f;
+
+		const ICollideable *pCollide = pEntity->GetCollideable();
+		if (pCollide == nullptr)
+			return 0.0f;
+
+		return (pCollide->GetCollisionOrigin() - m_pController->GetLocalOrigin()).Length2D();
 		//return distanceFrom(CBotGlobals::entityOrigin(pEntity));
 	}
 
@@ -413,6 +437,13 @@ public:
 
 	virtual bool handleAttack ( CBotWeapon *pWeapon, edict_t *pEnemy );
 
+	// Juke side-to-side during ranged combat. Self-gating: ranged weapons only, real enemy, not
+	// carrying objective, not point-blank, solid ground only. cvar: rcbot_ranged_strafe. [APG]RoboCop[CL]
+	void doRangedStrafe (const CBotWeapon *pWeapon, edict_t *pEnemy );
+
+	// True when bot is carrying an objective. Base bots return false; CBotFortress overrides. [APG]RoboCop[CL]
+	virtual bool isCarryingObjective () { return false; }
+
 	float DotProductFromOrigin (const Vector& pOrigin ) const;
 
 	bool FVisible ( edict_t *pEdict, bool bCheckHead = false );
@@ -447,7 +478,7 @@ public:
 	 bool FInViewCone ( edict_t *pEntity ) const;	
 
 	/*
-	 * make bot start the gmae, e.g join a team first
+	 * make bot start the game, e.g join a team first
 	 */
 	virtual bool startGame ();
 	virtual bool checkStuck ();
@@ -668,7 +699,11 @@ public:
     CBotProfile *getProfile () const { return m_pProfile; }
 
 	virtual bool canGotoWaypoint (const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev = nullptr);
-	
+
+	// True while bot is placing a buildable. Navigator's stuck-recovery checks this to avoid interrupting placement.
+	// Distinct from CBotFortress::isBuilding() (entity is a building). [APG]RoboCop[CL]
+	virtual bool isPlacingBuilding () { return false; }
+
 	void updatePosition() const;
 
 	void tapButton ( int iButton ) const;
@@ -769,7 +804,7 @@ public:
 
 	virtual bool overrideAmmoTypes () { return true; }
 
-	virtual void debugBot ( char *msg );
+	virtual void debugBot ( char *msg, std::size_t msgSize );
 
 	virtual bool walkingTowardsWaypoint ( CWaypoint *pWaypoint, bool *bOffsetApplied, Vector &vOffset );
 
@@ -922,6 +957,10 @@ protected:
 	float m_fNextUpdateStuckConstants;
 
 	float m_fStrafeTime;
+	// Combat strafe timer (melee flank and ranged juke share it).
+	// Moved from CBotFF to support FF/TF2/HL2DM in doRangedStrafe(). [APG]RoboCop[CL]
+	float m_fMeleeStrafeTime = 0.0f;
+	bool m_bMeleeStrafeLeft = false;
 	float m_fLastSeeEnemy;
 	float m_fLastUpdateLastSeeEnemy;
 
@@ -948,6 +987,7 @@ protected:
 	IPlayerInfo *m_pPlayerInfo; //-- sensors
 	IBotController *m_pController; //-- actuators
 	CBotCmd cmd; // actuator command
+	bool m_bLoggedFFRunCmd = false; // [FF-DIAG] one-time confirmation log [APG]RoboCop[CL]
 	////////////////////////////////////
 	MyEHandle m_pEnemy; // current enemy
 	MyEHandle m_pOldEnemy;

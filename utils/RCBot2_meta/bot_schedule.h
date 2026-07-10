@@ -127,7 +127,14 @@ public:
 	virtual void init () {
 	} // nothing, used by sub classes
 
-	virtual ~CBotSchedule() = default; //TODO: experimental [APG]RoboCop[CL]
+	virtual ~CBotSchedule()
+	{
+		freeMemory(); // own our tasks: deleting a schedule frees its tasks (RAII) [APG]RoboCop[CL]
+	}
+
+	// Owns its tasks (freed in the destructor) - forbid copying to avoid a double-free [APG]RoboCop[CL]
+	CBotSchedule(const CBotSchedule&) = delete;
+	CBotSchedule& operator=(const CBotSchedule&) = delete;
 
 	void addTask( CBotTask *pTask );
 
@@ -222,6 +229,7 @@ public:
 	{
 		for (std::deque<CBotSchedule*>::iterator it = m_Schedules.begin(); it != m_Schedules.end(); ) {
 			if ((*it)->isID(iSchedule)) {
+				delete *it; // ~CBotSchedule frees its tasks
 				m_Schedules.erase(it);
 				return;
 			}
@@ -243,13 +251,10 @@ public:
 
 	void removeTop ()
 	{
-		CBotSchedule *pSched = m_Schedules.front();
+		const CBotSchedule *pSched = m_Schedules.front();
 		m_Schedules.pop_front();
 
-		// TODO: eradicate freeMemory from the codebase
-		pSched->freeMemory();
-
-		delete pSched;
+		delete pSched; // ~CBotSchedule frees its tasks
 	}
 
 	void freeMemory ()

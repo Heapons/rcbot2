@@ -1,9 +1,8 @@
 import os, sys
 
-# Force GCC on Linux for legacy support - [APG]RoboCop[CL]
-#if sys.platform.startswith('linux'):
-#    os.environ['CC'] = 'gcc'
-#    os.environ['CXX'] = 'g++'
+# NOTE: The Clang bit-field V_swap issue in utlblockmemory.h is now handled
+# by compat/tier1/utlblockmemory.h (see AMBuilder). Forcing GCC is no longer
+# needed and caused undefined-symbol errors (e.g. KeyValuesSystem). [APG]RoboCop[CL]
 
 def ResolveEnvPath(env, folder):
   if env in os.environ:
@@ -80,6 +79,13 @@ class MMSConfig(object):
       self.configure_cxx(cxx)
     
   def configure_cxx(self, cxx):
+
+    # Valve Profiler
+    # getattr guard: a build cache configured before this option existed has no 'vprof'
+    # attribute, and a plain builder.options.vprof would crash the reparse. Defaults off.
+    if getattr(builder.options, 'vprof', None) == '1':
+      cxx.defines += ['RCBOT_VPROF_ENABLED', 'RAD_TELEMETRY_DISABLED']
+	  
     if cxx.behavior == 'gcc':
       cxx.defines += [
         'HAVE_STDINT_H',
@@ -100,13 +106,15 @@ class MMSConfig(object):
         '-msse',
         '-msse2',
         '-fPIC',
-        '-std=c++17',
+        '-std=c17',
       ]
 
       if (cxx.version >= 'gcc-4.0') or cxx.family == 'clang':
         cxx.cflags += ['-fvisibility=hidden']
         cxx.cxxflags += ['-fvisibility-inlines-hidden']
+        
       cxx.cxxflags += [
+        '-std=c++17',
         '-fexceptions',
         '-fno-rtti',
         '-fno-threadsafe-statics',
@@ -114,11 +122,15 @@ class MMSConfig(object):
         '-Wno-overloaded-virtual',
         '-Wno-register',
       ]
+	  
       if (cxx.version >= 'gcc-4.7' or cxx.family == 'clang'):
         cxx.cxxflags += ['-Wno-delete-non-virtual-dtor']
       if cxx.family == 'gcc':
         cxx.cflags += ['-mfpmath=sse']
         cxx.cxxflags += ['-Wno-class-memaccess']
+        cxx.cxxflags += ['-Wno-template-id-cdtor']
+        cxx.cxxflags += ['-Wno-nonnull-compare']
+        cxx.cxxflags += ['-Wno-ignored-attributes']
       if cxx.family == 'clang':
         cxx.cxxflags += ['-Wno-implicit-exception-spec-mismatch']
         if cxx.version >= 'clang-3.9' or cxx.version >= 'apple-clang-10.0':
@@ -135,23 +147,25 @@ class MMSConfig(object):
         cxx.cflags += [
           '-Wno-implicit-int-float-conversion',
           '-Wno-tautological-overlap-compare',
+          # The hl2sdk-manifests define TF_DLL, which causes shareddefs.h to
+          # redefine SPROP_COORD. The SDK's own include order triggers this
+          # redefinition across dt_common.h and shareddefs.h. [APG]RoboCop[CL]
+          '-Wno-macro-redefined',
         ]
 
     elif cxx.like('msvc'):
-      if builder.options.debug == '1':
-        cxx.cflags += ['/MTd']
-        cxx.linkflags += ['/NODEFAULTLIB:libcmt']
-      else:
-        cxx.cflags += ['/MT']
+      # Always use /MT (release CRT) even in debug builds, because the
+      # prebuilt HL2SDK tier1/mathlib libraries are compiled with /MT.
+      # Using /MTd causes LNK2038 RuntimeLibrary and _ITERATOR_DEBUG_LEVEL
+      # mismatches at link time. [APG]RoboCop[CL]
+      cxx.cflags += ['/MT']
       cxx.defines += [
         '_CRT_SECURE_NO_DEPRECATE',
         '_CRT_SECURE_NO_WARNINGS',
         '_CRT_NONSTDC_NO_DEPRECATE',
       ]
-      cxx.cflags += [
-        '/W3',
-        '/EHsc'
-      ]
+	  
+      cxx.cflags += ['/W3', '/EHsc']
       cxx.cxxflags += ['/TP', '/std:c++17']
       
       cxx.linkflags += [
@@ -181,11 +195,15 @@ class MMSConfig(object):
 
     # Debugging
     if builder.options.debug:
-      cxx.defines += ['DEBUG', '_DEBUG']
+      cxx.defines += ['DEBUG']
       if cxx.behavior == 'gcc':
+        cxx.defines += ['_DEBUG']
         cxx.cflags += ['-g3']
       elif cxx.behavior == 'msvc':
-        cxx.cflags += ['/Od', '/RTC1']
+        # Use /Od (no optimization) + /RTC1 (runtime checks) + /Z7 (debug info)
+        # but do NOT define _DEBUG on MSVC, as it triggers _ITERATOR_DEBUG_LEVEL=2
+        # which is incompatible with the prebuilt HL2SDK release libraries. [APG]RoboCop[CL]
+        cxx.cflags += ['/Od', '/RTC1', '/Z7']
 
     # Don't omit the frame pointer.
     # This needs to be after our optimization flags which could otherwise disable it.
@@ -202,25 +220,20 @@ class MMSConfig(object):
       elif cxx.family == 'clang':
         cxx.linkflags += ['-lgcc_eh']
       cxx.linkflags += ['-static-libstdc++']
+	  
     elif cxx.target.platform == 'mac':
       cxx.defines += ['OSX', '_OSX', 'POSIX']
 
       if cxx.version >= 'apple-clang-10.0':
         cxx.cflags += ['-mmacosx-version-min=10.9', '-stdlib=libc++']
-        cxx.linkflags += [
-          '-mmacosx-version-min=10.9',
-        ]
+        cxx.linkflags += ['-mmacosx-version-min=10.9']
       else:
         cxx.cflags += ['-mmacosx-version-min=10.5']
-        cxx.linkflags += [
-          '-mmacosx-version-min=10.5',
-        ]
+        cxx.linkflags += ['-mmacosx-version-min=10.5']
 
-      cxx.linkflags += [
-        '-stdlib=libc++',
-        '-lc++',
-      ]
+      cxx.linkflags += ['-stdlib=libc++', '-lc++']
       cxx.cxxflags += ['-stdlib=libc++']
+	  
     elif cxx.target.platform == 'windows':
       cxx.defines += ['WIN32', '_WINDOWS']
     

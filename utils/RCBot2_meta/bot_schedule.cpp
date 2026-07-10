@@ -41,6 +41,7 @@
 #include "bot_task.h"
 #include "bot_waypoint_locations.h"
 #include "bot_weapons.h"
+#include "logging.h"
 ////////////////////////////////////
 // these must match the SCHED IDs
 const char *szSchedules[SCHED_MAX+1] = 
@@ -531,6 +532,12 @@ CBotDefendSched::CBotDefendSched (const int iWaypointID, const float fMaxTime)
 {
 	CWaypoint* pWaypoint = CWaypoints::getWaypoint(iWaypointID);
 
+	if (pWaypoint == nullptr)
+	{
+		logger->Log(LogLevel::ERROR, "Invalid waypoint ID: Unable to retrieve waypoint.");
+		return;
+	}
+
 	addTask(new CFindPathTask(iWaypointID));
 	addTask(new CBotDefendTask(pWaypoint->getOrigin(),fMaxTime,8,false,Vector(0,0,0),LOOK_SNIPE,pWaypoint->getFlags()));
 }
@@ -699,13 +706,12 @@ CBotFollowLastEnemy::CBotFollowLastEnemy(CBot* pBot, edict_t* pEnemy, const Vect
 
 	if (CClassInterface::getVelocity(pEnemy, &vVelocity))
 	{
-		if (pClient && vVelocity == Vector(0, 0, 0))
+		if (vVelocity == Vector(0, 0, 0))
 			vVelocity = pClient->getVelocity();
 	}
 	else
 	{
-		if (pClient)
-			vVelocity = pClient->getVelocity();
+		vVelocity = pClient->getVelocity();
 	}
 	pFindPath->setCompleteInterrupt(CONDITION_SEE_CUR_ENEMY);
 
@@ -801,10 +807,6 @@ CCSSPlantBombSched::CCSSPlantBombSched(CWaypoint *pWaypoint, CWaypoint *pRoute)
 /////////////////////////////////////////////
 void CBotSchedule :: execute ( CBot *pBot )
 {
-	// current task
-	static CBotTask *pTask;
-	static eTaskState iState;
-
 	if ( m_Tasks.empty() )
 	{
 		m_bFailed = true;
@@ -812,7 +814,7 @@ void CBotSchedule :: execute ( CBot *pBot )
 	}
 
 	// why would task ever be null??
-	pTask = m_Tasks.front();
+	CBotTask *pTask = m_Tasks.front();
 
 	if ( pTask == nullptr)
 	{
@@ -820,7 +822,7 @@ void CBotSchedule :: execute ( CBot *pBot )
 		return;
 	}
 
-	iState = pTask->isInterrupted(pBot);
+	const eTaskState iState = pTask->isInterrupted(pBot);
 
 	if ( iState == STATE_FAIL )
 		pTask->fail();

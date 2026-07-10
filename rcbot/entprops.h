@@ -51,6 +51,11 @@ class CBotEntProp
 {
 public:
 	void Init(bool reset = false);
+	// True once RCBot2's SourceMod extension is loaded and the entity-property
+	// helpers (sm_gamehelpers et al.) are valid. The bot AI runs on Metamod's
+	// GameFrame hook, which can fire before the SM extension is ready, so callers
+	// on that path must check this before using any GetEntProp*/SetEntProp* call [APG]RoboCop[CL]
+	bool isAvailable() const;
 	int GetEntProp(int entity, PropType proptype, const char *prop, int size = 4, int element = 0);
 	int *GetEntPropPointer(int entity, PropType proptype, const char *prop, int size = 4, int element = 0);
 	bool GetEntPropBool(int entity, PropType proptype, const char *prop, int element = 0);
@@ -89,6 +94,9 @@ private:
 	bool FindSendProp(SourceMod::sm_sendprop_info_t *info, CBaseEntity *pEntity, const char *prop, int entity);
 	int MatchTypeDescAsInteger(_fieldtypes type, int flags);
 	bool IndexToAThings(int num, CBaseEntity **pEntData, edict_t **pEdictData);
+	// Logs an "entity invalid" error, silently no-op when the entprop layer
+	// isn't available yet (avoids a null-deref + log spam on that path) [APG]RoboCop[CL]
+	void logEntityInvalid(int ref) const;
 	CBaseEntity *GetEntity(int entity);
 	CBaseEntity *GetGameRulesProxyEntity();
 

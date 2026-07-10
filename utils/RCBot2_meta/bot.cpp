@@ -47,6 +47,7 @@
 #include "eiface.h"
 
 #ifdef __linux__
+#include <dt_common.h>
 #include "shareddefs.h" //bir3yk
 #endif
 
@@ -82,8 +83,10 @@
 
 #include "bot_getprop.h"
 #include "bot_profiling.h"
+#include "bot_mods.h"
 
 #include "rcbot/logging.h"
+#include "rcbot/entprops.h"
 
 #include <algorithm>
 #include <random>
@@ -93,6 +96,10 @@
 //#if SOURCE_ENGINE == SE_SDK2013 || SOURCE_ENGINE == SE_BMS
 #include "valve_minmax_off.h"
 //#endif
+
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
 
 constexpr float DEG_TO_RAD(const float x) { return x * 0.0174533f; }
 constexpr float RAD_TO_DEG(const float x) { return x * 57.29578f; }
@@ -421,6 +428,10 @@ bool CBot :: createBotFromEdict(edict_t *pEdict, CBotProfile *pProfile)
 
 bool CBot :: FVisible (const Vector &vOrigin, edict_t *pDest) const
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::FVisible( Vector )", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	//return CBotGlobals::isVisible(m_pEdict,getEyePosition(),vOrigin);
 	// fix bots seeing through gates/doors
 	return CBotGlobals::isVisibleHitAllExceptPlayer(m_pEdict,getEyePosition(),vOrigin,pDest);
@@ -429,6 +440,10 @@ bool CBot :: FVisible (const Vector &vOrigin, edict_t *pDest) const
 
 bool CBot :: FVisible ( edict_t *pEdict, const bool bCheckHead )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::FVisible( edict )", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector eye;
 
 	// use special hit traceline for players so bots dont shoot through things 
@@ -504,29 +519,29 @@ bool CBot :: checkStuck ()
 {
 	static float fTime;
 
-	if ( !moveToIsValid() )
+	if (!moveToIsValid())
 		return false;
-	if ( rcbot_dont_move.GetBool() ) // bots not moving
+	if (rcbot_dont_move.GetBool()) // bots not moving
 		return false;
-	if ( hasEnemy() )
+	if (hasEnemy())
 		return false;
 
 	fTime = engine->Time();
 
-	if ( m_fLastWaypointVisible == 0.0f )
+	if (m_fLastWaypointVisible <= 0.0f)
 	{
 		m_bFailNextMove = false;
 
-		if ( !hasSomeConditions(CONDITION_SEE_WAYPOINT) )
+		if (!hasSomeConditions(CONDITION_SEE_WAYPOINT))
 			m_fLastWaypointVisible = fTime;
 	}
 	else
 	{
-		if ( hasSomeConditions(CONDITION_SEE_WAYPOINT) )
+		if (hasSomeConditions(CONDITION_SEE_WAYPOINT))
 			m_fLastWaypointVisible = 0.0f;
 		else
 		{
-			if ( m_fLastWaypointVisible + 2.0f < fTime )
+			if (m_fLastWaypointVisible + 2.0f < fTime)
 			{
 				m_fLastWaypointVisible = 0.0f;
 				m_bFailNextMove = true;
@@ -542,22 +557,22 @@ bool CBot :: checkStuck ()
 		m_fWaypointStuckTime = engine->Time() + randomFloat(15.0f, 20.0f);
 	}
 
-	if ( m_fCheckStuckTime > fTime )
+	if (m_fCheckStuckTime > fTime)
 		return m_bThinkStuck;
 
-	if ( hasSomeConditions(CONDITION_LIFT) || onLadder())//fabs(m_vMoveTo.z - getOrigin().z) > 48 )
+	if (hasSomeConditions(CONDITION_LIFT) || onLadder())//fabs(m_vMoveTo.z - getOrigin().z) > 48 )
 	{
-		if ( m_vVelocity.z != 0.0f )
+		if (std::fabs(m_vVelocity.z) > 0.0001f)
 			return false;
 	}
 
 	const float fSpeed = m_vVelocity.Length();
 	float fIdealSpeed = m_fIdealMoveSpeed;
 
-	if ( m_pButtons->holdingButton(IN_DUCK) )
+	if (m_pButtons->holdingButton(IN_DUCK))
 		fIdealSpeed /= 2;
 
-	if ( fIdealSpeed == 0.0f )
+	if (fIdealSpeed <= 0.0f)
 	{
 		m_bThinkStuck = false; // not stuck
 		m_fPercentMoved = 1.0f;
@@ -567,7 +582,7 @@ bool CBot :: checkStuck ()
 		// alpha percentage check
 		m_fPercentMoved = m_fPercentMoved/2 + fSpeed/fIdealSpeed/2;
 
-		if ( m_fPercentMoved < 0.1f )
+		if (m_fPercentMoved < 0.1f)
 		{
 			m_bThinkStuck = true;
 			m_fPercentMoved = 0.1f;
@@ -775,6 +790,10 @@ void CBot :: kill () const
 
 void CBot :: think ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::think", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static float fTime;
 	//static bool debug;
 	//static bool battack;
@@ -783,7 +802,7 @@ void CBot :: think ()
 	
 	fTime = engine->Time();
 
-//	Vector *pvVelocity;
+	//Vector *pvVelocity;
 
 	// important!!!
 	//
@@ -1070,7 +1089,7 @@ void CBot :: think ()
 		constexpr float fMaxDifference = 600.0f;
 		const float fMaxDifferenceAdjusted = fMaxDifference * fLerpTimeDelta;
 
-		m_fEnemyAimLerp = !vEnemyAimLerpVelocity.IsValid() || vEnemyAimLerpVelocity.Length() == 0.0f
+		m_fEnemyAimLerp = !vEnemyAimLerpVelocity.IsValid() || vEnemyAimLerpVelocity.Length() <= 0.0f
 			|| (std::fabs(vEnemyAimLerpVelocity.x - m_vEnemyAimLerpVelocity.x)
 				+ std::fabs(vEnemyAimLerpVelocity.y - m_vEnemyAimLerpVelocity.y)
 				+ std::fabs(vEnemyAimLerpVelocity.z - m_vEnemyAimLerpVelocity.z))
@@ -1234,7 +1253,7 @@ void CBot :: updateConditions ()
 			{
 				removeCondition(CONDITION_SQUAD_LEADER_DEAD);
 
-				if ( distanceFrom(pLeader) <= 400.0f )
+				if ( pLeader && distanceFrom(pLeader) <= 400.0f )
 					updateCondition(CONDITION_SQUAD_LEADER_INRANGE);
 				else
 					removeCondition(CONDITION_SQUAD_LEADER_INRANGE);
@@ -1244,10 +1263,8 @@ void CBot :: updateConditions ()
 				else
 					removeCondition(CONDITION_SEE_SQUAD_LEADER);
 
-				float fSpeed = 0.0f;
-
-				if ( const CClient *pClient = CClients::get(pLeader) )
-					fSpeed = pClient->getSpeed();
+				const CClient *pClient = CClients::get(pLeader);
+				const float fSpeed = pClient->getSpeed();
 
 				// update squad idle condition. If squad is idle, bot can move around a small radius 
 				// around the leader and do what they want, e.g. defend or snipe
@@ -1296,6 +1313,10 @@ void CBot :: updateConditions ()
 // Called when working out route
 bool CBot::canGotoWaypoint(const Vector& vPrevWaypoint, CWaypoint* pWaypoint, CWaypoint* pPrev)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::canGotoWaypoint", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	if (pWaypoint->hasFlag(CWaypointTypes::W_FL_UNREACHABLE))
 		return false;
 	if (!pWaypoint->forTeam(getTeam()))
@@ -1776,18 +1797,19 @@ bool CBot :: isFacing (const Vector& vOrigin) const
 	return DotProductFromOrigin(vOrigin) > 0.97f;
 }
 
-void CBot ::debugBot(char *msg)
+void CBot::debugBot(char* msg, const std::size_t msgSize)
 {
-	const bool hastask = m_pSchedules->getCurrentTask()!= nullptr;
+	CBotTask* pCurrentTask = m_pSchedules ? m_pSchedules->getCurrentTask() : nullptr;
+	const bool hastask = pCurrentTask != nullptr;
 
 	char szConditions[512];
 	//int iBit = 0;
 
-	szConditions[0] = 0; // initialise string
+	szConditions[0] = 0; // initialize string
 
 	for (std::size_t iCond = 0; iCond < NUM_CONDITIONS; iCond++)
 	{
-		if ( m_iConditions[iCond] )
+		if (m_iConditions[iCond])
 		{
 			std::strcat(szConditions, pszConditionsDebugStrings[iCond]);
 			std::strcat(szConditions, "\n");
@@ -1796,47 +1818,72 @@ void CBot ::debugBot(char *msg)
 
 	char task_string[256];
 
-	extern const char *g_szUtils[BOT_UTIL_MAX+1]; //Redundant? [APG]RoboCopCL]
+	extern const char* g_szUtils[BOT_UTIL_MAX + 1]; // Redundant? [APG]RoboCopCL]
 
-	edict_t *pEnemy = m_pEnemy.get();
+	edict_t* pEnemy = m_pEnemy.get();
 
-	IPlayerInfo *p = nullptr;
+	IPlayerInfo* p = nullptr;
 
 	const int iEnemyID = ENTINDEX(pEnemy);
 
-	if ( iEnemyID > 0 && iEnemyID <= gpGlobals->maxClients )
+	if (iEnemyID > 0 && iEnemyID <= gpGlobals->maxClients)
 		p = playerinfomanager->GetPlayerInfo(pEnemy);
 	
-
-	if ( hastask )
-		m_pSchedules->getCurrentTask()->debugString(task_string, {});
+	if (hastask)
+		pCurrentTask->debugString(task_string, {});
 
 	const bool hasNextPoint = m_pNavigator->hasNextPoint();
 	const int currentWaypointID = hasNextPoint ? m_pNavigator->getCurrentWaypointID() : -1;
 	const int currentGoalID = hasNextPoint ? m_pNavigator->getCurrentGoalID() : -1;
 
-	std::sprintf(msg, "Debugging bot: %s\n \
+	// The actual nearest waypoint to the bot (independent of whether it's navigating) --
+	// tells us at a glance if a "Waypoint:-1" bot is genuinely off the network or just
+	// not routing. Plus the team, to confirm getTeam() reads correctly. [APG]RoboCop[CL]
+	const int iTeam = getTeam();
+	const int iNearestWpt = CWaypointLocations::NearestWaypoint(getOrigin(), CWaypointLocations::REACHABLE_RANGE, -1, true, false, true, nullptr, false, iTeam);
+
+	const CBotSchedule *pCurrentSchedule = (m_pSchedules && !m_pSchedules->isEmpty()) ? m_pSchedules->getCurrentSchedule() : nullptr;
+
+	// Held buttons + move speeds -- decodes the move-slowing keys so a held USE
+	// (or DUCK/WALK) shows at a glance. [APG]RoboCop[CL]
+	char btn_string[160];
+	snprintf(btn_string, sizeof(btn_string), "0x%x [%s%s%s%s%s%s] fwd=%.0f side=%.0f up=%.0f",
+		m_iButtons,
+		(m_iButtons & IN_USE)     ? "USE "    : "",
+		(m_iButtons & IN_DUCK)    ? "DUCK "   : "",
+		(m_iButtons & IN_SPEED)   ? "SPEED "  : "",
+		(m_iButtons & IN_ATTACK)  ? "ATK "    : "",
+		(m_iButtons & IN_FORWARD) ? "FWD "    : "",
+		(m_iButtons & IN_JUMP)    ? "JUMP "   : "",
+		m_fForwardSpeed, m_fSideSpeed, m_fUpSpeed);
+
+	snprintf(msg, msgSize,
+		"Debugging bot: %s\n \
 		Current Util: %s \n \
 		Current Schedule: %s\n \
 		Current Task: {%s}\n \
 		Look Task:%s\n \
 		Current Waypoint:%d\n \
 		Current Goal: %d\n \
+		Team: %d  Nearest Wpt: %d\n \
+		Buttons: %s\n \
 		Danger: %0.2f pc\n \
 		Enemy: %s (name = '%s')\n \
 		---CONDITIONS---\n%s",
 		m_szBotName,
 		m_CurrentUtil < BOT_UTIL_MAX + 1 ? g_szUtils[m_CurrentUtil] : "none",
-		m_pSchedules->isEmpty() ? "none" : m_pSchedules->getCurrentSchedule()->getIDString(),
+		pCurrentSchedule != nullptr ? pCurrentSchedule->getIDString() : "none",
 		hastask ? task_string : "none",
 		g_szLookTaskToString[m_iLookTask],
 		currentWaypointID,
 		currentGoalID,
+		iTeam,
+		iNearestWpt,
+		btn_string,
 		m_fCurrentDanger / MAX_BELIEF * 100,
 		pEnemy != nullptr ? pEnemy->GetClassName() : "none",
 		p != nullptr ? p->GetName() : "none",
-		szConditions
-	);
+		szConditions);
 }
 
 int CBot :: nearbyFriendlies (const float fDistance)
@@ -2059,7 +2106,7 @@ void CBot :: listenForPlayers ()
 				fFactor += vVelocity.Length();
 		}
 
-		if ( fFactor == 0.0f )
+		if ( fFactor <= 0.0f )
 			continue;
 
 		// add inverted distance to the factor (i.e. closer = better)
@@ -2103,7 +2150,7 @@ void CBot :: listenToPlayer ( edict_t *pPlayer, bool bIsEnemy, const bool bIsAtt
 		}
 		else if ( bIsAttacking )
 		{
-			if ( !bIsEnemy && wantToInvestigateSound() ) //TODO: !bIsEnemy always true? [APG]RoboCop[CL]
+			if ( wantToInvestigateSound() )
 			{
 				const QAngle angle = p->GetAbsAngles();
 				Vector forward;
@@ -2230,12 +2277,16 @@ void CBot :: doMove ()
 #ifndef __linux__
 					if ( CClients::clientsDebugging(BOT_DEBUG_THINK) )
 					{
-						const Vector m_vAvoidOrigin = CBotGlobals::entityOrigin(m_pAvoidEntity);
+						edict_t *pAvoidEnt = m_pAvoidEntity.get();
+						if (pAvoidEnt != nullptr)
+						{
+							const Vector m_vAvoidOrigin = CBotGlobals::entityOrigin(pAvoidEnt);
 
-						debugoverlay->AddLineOverlay (getOrigin(), m_vAvoidOrigin, 0,0,255, false, 0.05f);
-						debugoverlay->AddLineOverlay (getOrigin(), m_bAvoidRight ? getOrigin()+vLeft*bot_avoid_strength.GetFloat():getOrigin()-vLeft*bot_avoid_strength.GetFloat(), 0,255,0, false, 0.05f);
-						debugoverlay->AddLineOverlay (getOrigin(), getOrigin() + vMove/vMove.Length()*bot_avoid_strength.GetFloat(), 255,0,0, false, 0.05f);
-						debugoverlay->AddTextOverlayRGB(getOrigin()+Vector(0,0,100),0,0.05f,255,255,255,255,"Avoiding: %s",m_pAvoidEntity.get()->GetClassName());
+							debugoverlay->AddLineOverlay(getOrigin(), m_vAvoidOrigin, 0, 0, 255, false, 0.05f);
+							debugoverlay->AddLineOverlay(getOrigin(), m_bAvoidRight ? getOrigin() + vLeft * bot_avoid_strength.GetFloat() : getOrigin() - vLeft * bot_avoid_strength.GetFloat(), 0, 255, 0, false, 0.05f);
+							debugoverlay->AddLineOverlay(getOrigin(), getOrigin() + vMove / vMove.Length() * bot_avoid_strength.GetFloat(), 255, 0, 0, false, 0.05f);
+							debugoverlay->AddTextOverlayRGB(getOrigin() + Vector(0, 0, 100), 0, 0.05f, 255, 255, 255, 255, "Avoiding: %s", pAvoidEnt->GetClassName());
+						}
 					}
 #endif
 
@@ -2311,6 +2362,15 @@ void CBot :: doMove ()
 			m_fSideSpeed = 0.0f;
 		}
 
+		// Mount assist required to prevent bots getting stuck [APG]RoboCop[CL]
+		if ( m_pNavigator->nextPointIsOnLadder() && !onLadder() )
+		{
+			if ( m_pButtons->canPressButton(IN_USE) )
+				m_pButtons->tap(IN_USE);
+
+			m_fForwardSpeed = m_fIdealMoveSpeed; // drive into the ladder to grab it
+		}
+
 		if ( isUnderWater() || onLadder() )
 		{
 			if ( m_vMoveTo.z > getOrigin().z + 32.0f )
@@ -2373,6 +2433,10 @@ void CBot :: updateUtilTime (const int util)
 
 Vector CBot::getAimVector ( edict_t *pEntity )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::getAimVector", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector v_desired_offset;
 	static Vector v_origin;
 	static float fSensitivity;
@@ -2458,6 +2522,10 @@ Vector CBot::getAimVector ( edict_t *pEntity )
 
 void CBot::modAim ( edict_t *pEntity, Vector &v_origin, Vector *v_desired_offset, Vector &v_size, const float fDist, float fDist2D )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::modAim", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static Vector vel;
 	static Vector myvel;
 	static Vector enemyvel;
@@ -2553,7 +2621,7 @@ void CBot :: checkCanPickup ( edict_t *pPickup )
 
 Vector CBot::snipe (const Vector& vAiming)
 {
-		if ( m_fLookAroundTime < engine->Time() )
+		if (m_fLookAroundTime < engine->Time())
 		{
 			CTraceFilterWorldAndPropsOnly filter; //Unused? [APG]RoboCop[CL]
 			float fTime;
@@ -2565,14 +2633,14 @@ Vector CBot::snipe (const Vector& vAiming)
 			// forward
 			//CBotGlobals::traceLine(vOrigin,m_vWaypointAim+m_vLookAroundOffset,MASK_SOLID_BRUSHONLY|CONTENTS_OPAQUE,&filter);	
 
-			if ( m_fLookAroundTime == 0.0f )
+			if (m_fLookAroundTime <= 0.0f)
 				fTime = 0.1f;
 			else
 				fTime = randomFloat(3.0f,7.0f);
 
 			m_fLookAroundTime = engine->Time() + fTime;
 #ifndef __linux__
-			if ( CClients::clientsDebugging(BOT_DEBUG_NAV) )
+			if (CClients::clientsDebugging(BOT_DEBUG_NAV))
 			{
 				debugoverlay->AddLineOverlay (getOrigin(), m_vWaypointAim, 255,100,100, false, fTime);
 				debugoverlay->AddLineOverlay (getOrigin(), m_vWaypointAim+m_vLookAroundOffset, 255,40,40, false, fTime);
@@ -2892,6 +2960,10 @@ bool CBot :: select_CWeapon ( CWeapon *pWeapon )
 
 void CBot :: doLook ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBot::doLook", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	// what do we want to look at
 	getLookAtVector();
 
@@ -2917,7 +2989,7 @@ void CBot :: doLook ()
 
 		m_vViewAngles = command.viewangles;
 
-		if (m_vViewAngles.x == 0.0f && m_vViewAngles.y == 0.0f) {
+		if (std::fabs(m_vViewAngles.x) < 0.0001f && std::fabs(m_vViewAngles.y) < 0.0001f) {
 			CClients::clientDebugMsg(BOT_DEBUG_AIM, "view angle invalid", this);
 		}
 
@@ -2956,7 +3028,7 @@ void CBot :: secondaryAttack (const bool bHold, const float fTime) const
 	{
 		fLetGoTime = 0.0f;
 
-		if ( fTime )
+		if ( fTime > 0.0f )
 			fHoldTime = fTime;
 		else
 			fHoldTime = 1.0f;
@@ -2984,7 +3056,7 @@ void CBot :: primaryAttack (const bool bHold, const float fTime) const
 	{
 		fLetGoTime = 0.0f;
 
-		if ( fTime )
+		if ( fTime > 0.0f )
 			fHoldTime = fTime;
 		else
 			fHoldTime = 2.0f;
@@ -3047,14 +3119,12 @@ void CBot :: getTasks (unsigned iIgnore)
 	{
 		if ( wantToFollowEnemy() )
 		{
-			Vector vVelocity = Vector(0,0,0);
 			CClient *pClient = CClients::get(m_pLastEnemy);
-			CBotSchedule *pSchedule = new CBotSchedule();
-			
-			CFindPathTask *pFindPath = new CFindPathTask(m_vLastSeeEnemy);	
-			
-			if ( pClient )
-				vVelocity = pClient->getVelocity();
+				CBotSchedule *pSchedule = new CBotSchedule();
+
+				CFindPathTask *pFindPath = new CFindPathTask(m_vLastSeeEnemy);
+
+				const Vector vVelocity = pClient->getVelocity();
 
 			pSchedule->addTask(pFindPath);
 			pSchedule->addTask(new CFindLastEnemy(m_vLastSeeEnemy,vVelocity));
@@ -3172,7 +3242,7 @@ bool CBots::controlBot(const char* szOldName, const char* szName, const char* sz
 
 bool CBots :: createBot (const char *szClass, const char *szTeam, const char *szName)
 {
-	CBotMod *pMod = CBotGlobals::getCurrentMod(); // `*pMod` Unused? [APG]RoboCop[CL]
+	const CBotMod *pMod = CBotGlobals::getCurrentMod(); // used below to parse the team argument [APG]RoboCop[CL]
 	const char *szOVName = ""; // `szOVName` Unused? [APG]RoboCop[CL]
 
 	if ( m_iMaxBots != -1 && CBotGlobals::numPlayersPlaying() >= m_iMaxBots )
@@ -3198,7 +3268,12 @@ bool CBots :: createBot (const char *szClass, const char *szTeam, const char *sz
 	}
 
 	SET_PROFILE_DATA_INT(szClass,m_iClass)
-	SET_PROFILE_DATA_INT(szTeam,m_iTeam)
+	// Parse the team argument the mod-aware way ("red"/"blu"/"blue"/numeric)
+	// The old SET_PROFILE_DATA_INT used atoi(), which turned every team NAME into
+	// 0 -- so `addbot <class> red` and `... blu` behaved identically and the team
+	// argument was silently ignored -1 means "no preference / auto" ? [APG]RoboCop[CL]
+	if ( szTeam && *szTeam )
+		pBotProfile->m_iTeam = pMod->getTeamByName(szTeam);
 	SET_PROFILE_STRING(szName,szOVName,m_szName)
 
 	edict_t* pEdict = g_pBotManager->CreateBot(szOVName);
@@ -3220,7 +3295,7 @@ int CBots::createDefaultBot(const char* szName) {
 	CBotProfile* pBotProfile = new CBotProfile(*CBotProfiles::getDefaultProfile());
 	pBotProfile->m_szName = CStrings::getString(szName);
 
-	int slotInt = slotOfEdict(pEdict); // Get the slot as an int
+	const int slotInt = slotOfEdict(pEdict); // Get the slot as an int
 
 	if (slotInt < 0) {
 		// Handle invalid slot case
@@ -3238,6 +3313,10 @@ int CBots::createDefaultBot(const char* szName) {
 
 void CBots :: botFunction ( IBotFunction *function )
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::botFunction", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	for ( unsigned i = 0; i < RCBOT_MAXPLAYERS; i ++ )
 	{
 		if ( m_Bots[i]->inUse() && m_Bots[i]->getEdict() )
@@ -3338,6 +3417,10 @@ CBot *CBots :: findBotByProfile (const CBotProfile *pProfile)
 
 void CBots :: runPlayerMoveAll ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::runPlayerMoveAll", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBot *pBot;
 	for ( short i = 0; i < RCBOT_MAXPLAYERS; i ++ )
 	{
@@ -3360,9 +3443,20 @@ int CBots::levelInit()
 
 void CBots :: botThink ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CBots::botThink", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	static CBot *pBot;
 
 	const bool bBotStop = bot_stop.GetInt() > 0;
+
+	// NOTE: don't gate the whole AI on the entprop layer being ready. RCBot2
+	// runs the bot AI on Metamod's GameFrame hook and worked for years as a pure
+	// MM:S plugin; if RCBot2's SourceMod extension hasn't loaded (sm_gamehelpers
+	// null) bots must still navigate. The null-deref crash that used to happen in
+	// CBotEntProp::IndexToAThings is now handled inside the entprop layer itself,
+	// which degrades to safe defaults until the extension is ready. [APG]RoboCop[CL]
 
 #ifdef _DEBUG
 
@@ -3526,8 +3620,25 @@ bool CBots :: needToAddBot ()
 		return false;
 	}
 
-	const int iClients = CBotGlobals::numPlayersPlaying();
 	const int iBots = CBots::numBots();
+
+	// In MVM mode, only count RED team human players for slot management.
+	// BLU team slots are reserved for wave robots and should not prevent
+	// RCBots from being re-added between waves.
+	if (CBotGlobals::isMod(MOD_TF2) && CTeamFortress2Mod::isMapType(TF_MAP_MVM))
+	{
+		if (m_iMinBots != -1 && iBots < m_iMinBots)
+			return true;
+
+		// Count only RED team players (team 2) for slot checks
+		const int iRedPlayers = CBotGlobals::numPlayersOnTeam(2, false);
+		if (m_iMaxBots != -1 && iRedPlayers < m_iMaxBots)
+			return true;
+
+		return false;
+	}
+
+	const int iClients = CBotGlobals::numPlayersPlaying();
 
 	if ((m_iMinBots!=-1 && iBots < m_iMinBots) || (iClients < m_iMaxBots && m_iMaxBots != -1)) {
 		return true;
@@ -3541,6 +3652,11 @@ bool CBots :: needToKickBot ()
 	if (rcbot_bot_quota_interval.GetFloat() > 0.0f) {
 		return false;
 	}
+
+	// In MVM mode, never self-kick RCBots. They are allies on RED team
+	// and TF2's population manager handles BLU team slot management.
+	if (CBotGlobals::isMod(MOD_TF2) && CTeamFortress2Mod::isMapType(TF_MAP_MVM))
+		return false;
 
 	const int iClients = CBotGlobals::numPlayersPlaying();
 	const int iBots = CBots::numBots();
@@ -3560,19 +3676,19 @@ bool CBots :: needToKickBot ()
 
 void CBots :: kickChosenBot (const unsigned count)
 {
-        std::vector<CBot*> botList;
-        //gather list of bots
-        for ( unsigned i = 0; i < RCBOT_MAXPLAYERS; i ++ )
-        {
+		std::vector<CBot*> botList;
+		//gather list of bots
+		for ( unsigned i = 0; i < RCBOT_MAXPLAYERS; i ++ )
+		{
 		if ( m_Bots[i]->inUse() )
 			botList.emplace_back(m_Bots[i]);
-        }
+		}
 
-        if ( botList.empty() )
-        {
-                logger->Log(LogLevel::DEBUG, "kickChosenBot() : No bots to kick");
-                return;
-        }
+		if ( botList.empty() )
+		{
+				logger->Log(LogLevel::DEBUG, "kickChosenBot() : No bots to kick");
+				return;
+		}
 
 	int team;
 	int teamA = CBotGlobals::numPlayersOnTeam(2,false);
@@ -3677,8 +3793,8 @@ void CBots::kickChosenBotOnTeam(const int team)
 		return;
 	}
 
-	CBot* pBot = nullptr;
-	for (CBot* tBot : botList) {
+	const CBot* pBot = nullptr;
+	for (const CBot* tBot : botList) {
 		if ((pBot == nullptr) || ( pBot->getCreateTime() < tBot->getCreateTime() ))
 			pBot = tBot;
 	}
@@ -3712,11 +3828,8 @@ void CBots::kickRandomBotOnTeam(const int team)
 	}
 
 	const std::size_t botListSize = botList.size(); // Use std::size_t for size
-
-	if (botListSize > 0) {
-		const int index = randomInt(0, static_cast<int>(botListSize) - 1);
-		snprintf(szCommand, sizeof(szCommand), "kickid %d\n", botList[static_cast<std::size_t>(index)]);
-	}
+	const int index = randomInt(0, static_cast<int>(botListSize) - 1);
+	snprintf(szCommand, sizeof(szCommand), "kickid %d\n", botList[static_cast<std::size_t>(index)]);
 
 	m_flAddKickBotTime = engine->Time() + 2.0f;
 

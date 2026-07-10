@@ -43,6 +43,10 @@
 #include <vector>    //bir3yk
 #include <cmath>
 
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
+
 unsigned char CWaypointLocations :: g_iFailedWaypoints[CWaypoints::MAX_WAYPOINTS];
 WaypointList CWaypointLocations :: m_iLocations[MAX_WPT_BUCKETS][MAX_WPT_BUCKETS][MAX_WPT_BUCKETS];
 float CWaypointLocations :: m_fIgnoreSize = 0;
@@ -104,6 +108,12 @@ void CWaypointLocations :: getMinMaxs (const int iLoc, const int jLoc, const int
 void CWaypointLocations :: AutoPath (edict_t *pPlayer, const int iWpt)
 {
 	CWaypoint *pWpt = CWaypoints::getWaypoint(iWpt);
+
+	if (pWpt == nullptr)
+	{
+		return;
+	}
+
 	const Vector vOrigin = pWpt->getOrigin();
 
 	const int iLoc = READ_LOC(vOrigin.x)
@@ -192,6 +202,9 @@ void CWaypointLocations :: GetAllVisible (const int iFrom, int iOther, const Vec
 					int iWpt = arr[l];
 					const CWaypoint* pWpt = CWaypoints::getWaypoint(iWpt);
 
+					if (pWpt == nullptr)
+						continue;
+
 					//int iWpt = tempStack.ChooseFromStack();
 					
 					// within range only deal with these waypoints
@@ -214,6 +227,12 @@ void CWaypointLocations :: GetAllVisible (const int iFrom, int iOther, const Vec
 void CWaypointLocations :: AutoPathInBucket ( edict_t *pPlayer, const int i, const int j, const int k, const int iWptFrom )
 {
 	CWaypoint *pWpt = CWaypoints::getWaypoint(iWptFrom);
+
+	if (pWpt == nullptr)
+	{
+		return;
+	}
+
 	const Vector vWptOrigin = pWpt->getOrigin();
 
 	//trace_t tr; //tr not used? [APG]RoboCop[CL]
@@ -231,6 +250,9 @@ void CWaypointLocations :: AutoPathInBucket ( edict_t *pPlayer, const int i, con
 
 		CWaypoint* pOtherWpt = CWaypoints::getWaypoint(iWpt);
 
+		if ( pOtherWpt == nullptr )
+			continue;
+
 		if ( !pOtherWpt->isUsed() )
 			continue;
 
@@ -242,8 +264,8 @@ void CWaypointLocations :: AutoPathInBucket ( edict_t *pPlayer, const int i, con
 		
 		Vector vOtherWptOrigin = pOtherWpt->getOrigin();
 
-	//	if ( fabs(vOtherWptOrigin.z-vWptOrigin.z) > 128 )
-		//	continue;
+		//	if ( fabs(vOtherWptOrigin.z-vWptOrigin.z) > 128 )
+		//		continue;
 
 		if ( (vWptOrigin-vOtherWptOrigin).Length() <= bot_waypointpathdist.GetFloat() )
 		{
@@ -370,8 +392,11 @@ void CWaypointLocations :: FindNearestCoverWaypointInBucket (const int i, const 
 
 		CWaypoint* curr_wpt = CWaypoints::getWaypoint(iSelectedIndex);
 
+		if ( curr_wpt == nullptr )
+			continue;
+
 		if ( !curr_wpt->isUsed() )
-			continue; 
+			continue;
 		if ( curr_wpt->hasFlag(CWaypointTypes::W_FL_UNREACHABLE) )
 			continue;
 		if ( !curr_wpt->forTeam(iTeam) )
@@ -468,6 +493,9 @@ void CWaypointLocations :: FindNearestBlastInBucket (const int i, const int j, c
 
 		CWaypoint* curr_wpt = CWaypoints::getWaypoint(iSelectedIndex);
 
+		if ( curr_wpt == nullptr )
+			continue;
+
 		if ( !bGetUnReachable && curr_wpt->hasFlag(CWaypointTypes::W_FL_UNREACHABLE) )
 			continue;
 
@@ -562,6 +590,9 @@ void CWaypointLocations :: FindNearestInBucket (const int i, const int j, const 
 
 		CWaypoint* curr_wpt = CWaypoints::getWaypoint(iSelectedIndex);
 
+		if ( curr_wpt == nullptr )
+			continue;
+
 		if ( !bGetUnreachable && curr_wpt->hasFlag(CWaypointTypes::W_FL_UNREACHABLE) )
 			continue;
 
@@ -648,6 +679,10 @@ int CWaypointLocations :: NearestWaypoint (const Vector &vOrigin, float fNearest
 										   const bool bGetVisibleFromOther, const Vector& vOther, const int iFlagsOnly, 
 										   edict_t *pPlayer, const bool bIgnorevOther, const float fIgnoreSize)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CWaypointLocations::NearestWaypoint", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	int iNearestIndex = -1;
 
 	const int iLoc = READ_LOC(vOrigin.x)
@@ -749,6 +784,9 @@ void CWaypointLocations :: DrawWaypoints (const CClient *pClient, float fDist)
 					iWpt = l;
 
 					pWpt = CWaypoints::getWaypoint(iWpt);//tempStack.ChooseFromStack());
+
+					if ( pWpt == nullptr )
+						continue;
 
 					if ( !pWpt->isUsed() ) // deleted
 						continue;

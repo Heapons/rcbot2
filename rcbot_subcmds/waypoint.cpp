@@ -158,9 +158,8 @@ CBotCommandInline WaypointSaveCommand("save", CMD_ACCESS_WAYPOINT, [](CClient *p
 CBotCommandInline WaypointLoadCommand("load", CMD_ACCESS_WAYPOINT | CMD_ACCESS_DEDICATED, [](CClient* pClient, const BotCommandArgs& args)
 {
 	const char* mapNameToLoad = (args[0] && *args[0]) ? args[0] : CBotGlobals::getMapName();
-	const bool bLoadOK = CWaypoints::load(mapNameToLoad);
 
-	if (bLoadOK)
+	if (const bool bLoadOK = CWaypoints::load(mapNameToLoad))
 		CBotGlobals::botMessage(nullptr, 0, "waypoints %s loaded", mapNameToLoad);
 	else
 		CBotGlobals::botMessage(nullptr, 0, "error: could not load %s waypoints", mapNameToLoad);
@@ -187,21 +186,12 @@ CBotCommandInline WaypointGiveTypeCommand("givetype", CMD_ACCESS_WAYPOINT, [](CC
 			CBotGlobals::botMessage(pEntity,0,"No waypoint nearby to give types (move closer to the waypoint you want to give types)");
 		else
 		{
-			char *type = nullptr;
 			constexpr int NUM_ARGS = 4;
 
 			for (int i = 0; i < NUM_ARGS; i++)
 			{
-				if ( i == 0 )
-					type = const_cast<char*>(args[0]);
-				else if ( i == 1 )
-					type = const_cast<char*>(args[1]);
-				else if ( i == 2 )
-					type = const_cast<char*>(args[2]);
-				else if ( i == 3 )
-					type = const_cast<char*>(args[3]);
-
-				if ( !type || !*type )
+				char* type = const_cast<char*>(args[i]);
+				if (!type || !*type)
 					break;
 
 				if ( const CWaypointType *pType = CWaypointTypes::getType(type) )
@@ -211,29 +201,27 @@ CBotCommandInline WaypointGiveTypeCommand("givetype", CMD_ACCESS_WAYPOINT, [](CC
 						if ( pWaypoint->hasFlag(pType->getBits()) )
 						{
 							pWaypoint->removeFlag(pType->getBits());
-							CBotGlobals::botMessage(pEntity,0,"type %s removed from waypoint %d",type,CWaypoints::getWaypointIndex(pWaypoint));
+							CBotGlobals::botMessage(pEntity, 0, "type %s removed from waypoint %d", type, CWaypoints::getWaypointIndex(pWaypoint));
 							pClient->playSound("UI/buttonrollover");
 						}
 						else
 						{
 							pWaypoint->addFlag(pType->getBits());
-							
+
 							if ( pType->getBits() & CWaypointTypes::W_FL_UNREACHABLE )
 							{
 								CWaypoints::deletePathsTo(CWaypoints::getWaypointIndex(pWaypoint));
 								CWaypoints::deletePathsFrom(CWaypoints::getWaypointIndex(pWaypoint));
 							}
-
-							CBotGlobals::botMessage(pEntity,0,"type %s added to waypoint %d",type,CWaypoints::getWaypointIndex(pWaypoint));
-
+							CBotGlobals::botMessage(pEntity, 0, "type %s added to waypoint %d", type, CWaypoints::getWaypointIndex(pWaypoint));
 							pClient->playSound("UI/buttonclickrelease");
 						}
-						
+
 					}
 				}
 				else
 				{
-					CBotGlobals::botMessage(pEntity,0,"type '%s' not found",type);
+					CBotGlobals::botMessage(pEntity, 0, "type '%s' not found", type);
 					CWaypointTypes::showTypesOnConsole(pEntity);
 				}
 
@@ -254,7 +242,7 @@ CBotCommandInline WaypointDrawTypeCommand("drawtype", CMD_ACCESS_WAYPOINT, [](CC
 	{
 		if (args[0] && *args[0])
 		{
-			int drawType = std::atoi(args[0]);
+			const int drawType = std::atoi(args[0]);
 			if (drawType >= 0 && drawType <= std::numeric_limits<unsigned short>::max())
 			{
 				pClient->setDrawType(static_cast<unsigned short>(drawType));
@@ -487,11 +475,8 @@ CBotCommandInline WaypointShiftAreas("shiftareas", CMD_ACCESS_WAYPOINT, [](const
 		{
 			const int newarea = std::atoi(args[1]);
 
-			if ( pClient )
-			{
-				// change area val to newarea
-				CWaypoints::shiftVisibleAreas(pClient->getPlayer(),val,newarea);
-			}
+			// change area val to newarea
+			CWaypoints::shiftVisibleAreas(pClient->getPlayer(),val,newarea);
 		}
 		else
 			CWaypoints::shiftAreas(val);
@@ -674,7 +659,134 @@ CBotCommandInline WaypointAutoFix("autofix", CMD_ACCESS_WAYPOINT, [](CClient *pC
 	}
 
 	CWaypoints::autoFix(bFixSentry_Sniper_Defend_TeleExtWpts);
-	
+
+	return COMMAND_ACCESSED;
+});
+
+// Flood-fill from the player's current waypoint following OUTGOING paths: highlights every
+// reachable node (green line, where a debug overlay is available) and reports which FLAG
+// nodes are reachable. Stand on a spawn node and run it -- if the enemy flag prints "NOT
+// reachable", the network is split, and the green region's edge is the gap to bridge.
+// [APG]RoboCop[CL]
+CBotCommandInline WaypointReachableCommand("reachable", CMD_ACCESS_WAYPOINT, [](CClient *pClient, const BotCommandArgs& args)
+{
+	if (pClient == nullptr)
+		return COMMAND_ERROR;
+
+	pClient->updateCurrentWaypoint();
+	const int iStart = pClient->currentWaypoint();
+
+	if (!CWaypoints::validWaypointIndex(iStart))
+	{
+		pClient->giveMessage("Stand on a waypoint first");
+		return COMMAND_ERROR;
+	}
+
+	const int iNum = CWaypoints::numWaypoints();
+	std::vector<bool> visited(static_cast<std::size_t>(iNum), false);
+	std::vector<int> stack; // DFS -- order doesn't matter for reachability
+
+	visited[static_cast<std::size_t>(iStart)] = true;
+	stack.push_back(iStart);
+
+	int iReached = 0;
+
+	while (!stack.empty())
+	{
+		const int iCur = stack.back();
+		stack.pop_back();
+		iReached++;
+
+		CWaypoint *pWpt = CWaypoints::getWaypoint(iCur);
+
+		if (pWpt == nullptr)
+			continue;
+
+		if (debugoverlay != nullptr)
+			debugoverlay->AddLineOverlay(pWpt->getOrigin(), pWpt->getOrigin() + Vector(0, 0, 60), 0, 255, 0, true, 20.0f);
+
+		for (int i = 0; i < pWpt->numPaths(); i++)
+		{
+			const int iSucc = pWpt->getPath(i);
+
+			if (iSucc >= 0 && iSucc < iNum && !visited[static_cast<std::size_t>(iSucc)])
+			{
+				visited[static_cast<std::size_t>(iSucc)] = true;
+				stack.push_back(iSucc);
+			}
+		}
+	}
+
+	CBotGlobals::botMessage(pClient->getPlayer(), 0, "Reachable from wpt %d: %d / %d nodes (green = reachable)", iStart, iReached, iNum);
+
+	// Per-flag reachability -- the decisive bit for CTF connectivity.
+	for (int i = 0; i < iNum; i++)
+	{
+		CWaypoint *pFlagWpt = CWaypoints::getWaypoint(i);
+
+		if (pFlagWpt != nullptr && pFlagWpt->isUsed() && pFlagWpt->hasFlag(CWaypointTypes::W_FL_FLAG))
+			CBotGlobals::botMessage(pClient->getPlayer(), 0, "  flag node %d: %s", i,
+				visited[static_cast<std::size_t>(i)] ? "REACHABLE" : "NOT reachable");
+	}
+
+	// If anything is unreachable, find the closest reachable<->unreachable node pair -- the
+	// best single bridge to add. Draw a RED line at it and report the two ids + distance so
+	// you can teleport over and connect them. [APG]RoboCop[CL]
+	if (iReached < iNum)
+	{
+		float fBestDist = 1.0e9f;
+		int iBestReach = -1;
+		int iBestUnreach = -1;
+
+		// Pickup nodes (ammo/health/armour/resupply) are side-trips reached by detours/jumps,
+		// not the main cross-map route -- never suggest bridging to/from one.
+		constexpr int iPickupMask = CWaypointTypes::W_FL_HEALTH | CWaypointTypes::W_FL_AMMO |
+			CWaypointTypes::W_FL_ARMOR | CWaypointTypes::W_FL_RESUPPLY;
+
+		for (int u = 0; u < iNum; u++)
+		{
+			CWaypoint *pU = CWaypoints::getWaypoint(u);
+
+			if (visited[static_cast<std::size_t>(u)] || pU == nullptr || !pU->isUsed() || pU->hasSomeFlags(iPickupMask))
+				continue;
+
+			for (int r = 0; r < iNum; r++)
+			{
+				CWaypoint *pR = CWaypoints::getWaypoint(r);
+
+				if (!visited[static_cast<std::size_t>(r)] || pR == nullptr || !pR->isUsed() || pR->hasSomeFlags(iPickupMask))
+					continue;
+
+				const float fDist = (pU->getOrigin() - pR->getOrigin()).Length();
+
+				if (fDist >= fBestDist)
+					continue;
+
+				// Only a WALKABLE bridge: skip pairs whose straight line is blocked by a wall
+				// (the "red line through the wall" problem). [APG]RoboCop[CL]
+				if (!CBotGlobals::checkOpensLater(pR->getOrigin(), pU->getOrigin()))
+					continue;
+
+				fBestDist = fDist;
+				iBestReach = r;
+				iBestUnreach = u;
+			}
+		}
+
+		if (iBestReach != -1)
+		{
+			CWaypoint *pR = CWaypoints::getWaypoint(iBestReach);
+			CWaypoint *pU = CWaypoints::getWaypoint(iBestUnreach);
+
+			if (debugoverlay != nullptr && pR != nullptr && pU != nullptr)
+				debugoverlay->AddLineOverlay(pR->getOrigin(), pU->getOrigin(), 255, 0, 0, true, 20.0f);
+
+			CBotGlobals::botMessage(pClient->getPlayer(), 0,
+				"Nearest gap (RED line): reachable %d <-> unreachable %d, %.0f units -- bridge these both ways",
+				iBestReach, iBestUnreach, static_cast<double>(fBestDist));
+		}
+	}
+
 	return COMMAND_ACCESSED;
 });
 
@@ -704,5 +816,6 @@ CBotSubcommands WaypointSubcommands("waypoint", CMD_ACCESS_DEDICATED, {
 	&WaypointCheckCommand,
 	&WaypointShowVisCommand,
 	&WaypointAutoWaypointCommand,
-	&WaypointAutoFix
+	&WaypointAutoFix,
+	&WaypointReachableCommand
 });

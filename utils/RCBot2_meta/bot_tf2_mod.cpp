@@ -59,6 +59,10 @@
 
 //#if SOURCE_ENGINE == SE_SDK2013 || SOURCE_ENGINE == SE_BMS
 #include "valve_minmax_off.h"
+
+#ifdef RCBOT_VPROF_ENABLED
+#include <tier0/vprof.h>
+#endif // RCBOT_VPROF_ENABLED
 //#endif
 
 eTFMapType CTeamFortress2Mod :: m_MapType = TF_MAP_CTF;
@@ -184,6 +188,10 @@ void CTeamFortress2Mod :: getTeamOnlyWaypointFlags (const int iTeam, int *iOn, i
 
 void CTeamFortress2Mod ::modFrame ()
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CTeamFortress2Mod::modFrame", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	if( m_bPlayerHasSpawned )
 	{
 		if ( m_ObjectiveResource.m_ObjectiveResource == nullptr )
@@ -321,6 +329,8 @@ void CTeamFortress2Mod :: mapInit ()
 		m_MapType = TF_MAP_KOTH; // king of the hill
 	else if (std::strncmp(szmapname, "sd_", 3) == 0 ||
 		std::strncmp(szmapname, "workshop/sd_", 12) == 0 ||
+		std::strncmp(szmapname, "htf_", 4) == 0 ||
+		std::strncmp(szmapname, "workshop/htf_", 13) == 0 ||
 		std::strncmp(szmapname, "sdr_", 4) == 0)
 		// Object Destruction and Special Delivery Race (I dunno why it's named like this when it works as a usual sd_) works the same as SD_. - RussiaTails
 		m_MapType = TF_MAP_SD; // special delivery
@@ -343,9 +353,15 @@ void CTeamFortress2Mod :: mapInit ()
 			 std::strncmp(szmapname, "workshop/rd_", 12) == 0 ||
 			 std::strncmp(szmapname, "rda_", 4) == 0)
 		m_MapType = TF_MAP_RD; // robot destruction
+	else if (std::strncmp(szmapname, "workshop/pdr_", 13) == 0 ||
+		std::strncmp(szmapname, "pdr_", 4) == 0)
+		m_MapType = TF_MAP_PDR; // player destruction + payload race - RussiaTails
 	else if (std::strncmp(szmapname, "zi_", 3) == 0 ||
 			 std::strncmp(szmapname, "workshop/zi_", 12) == 0)
 		m_MapType = TF_MAP_ZI; // Zombie Infection //TODO: add support for those gamemodes [APG]RoboCop[CL]
+	else if (std::strncmp(szmapname, "workshop/boss_", 14) == 0 || std::strncmp(szmapname, "workshop/my_world_", 18) == 0 ||
+		std::strncmp(szmapname, "boss_", 5) == 0 || std::strncmp(szmapname, "my_world_", 9) == 0)
+		m_MapType = TF_MAP_BOSS; // test - RussiaTails
 	else
 		m_MapType = TF_MAP_DM; // deathmatch //TODO: to prevent bots from idling in their spawns by giving them basic tasks [APG]RoboCop[CL]
 
@@ -525,7 +541,7 @@ float CTeamFortress2Mod :: TF2_GetPlayerSpeed(edict_t *pPlayer, const TF_Class i
 
 	fSpeed = CClassInterface::getMaxSpeed(pPlayer);// * CClassInterface::getSpeedFactor(pPlayer);
 
-	if ( fSpeed == 0.0f )
+	if (fSpeed <= 0.0f)
 	{
 		if (TF2_IsPlayerSlowed(pPlayer)) 
 			return 30.0f;
@@ -592,6 +608,10 @@ bool CTeamFortress2Mod :: isFlag (edict_t *pEntity, const int iTeam)
 
 bool CTeamFortress2Mod::isBoss(edict_t* pEntity, float* fFactor)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CTeamFortress2Mod::isBoss", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	const string_t mapname = gpGlobals->mapname;
 
 	const char* szmapname = mapname.ToCStr();
@@ -613,7 +633,7 @@ bool CTeamFortress2Mod::isBoss(edict_t* pEntity, float* fFactor)
 			return (std::strcmp(pEntity->GetClassName(), "merasmus") != 0);
 	}
 	else if (CTeamFortress2Mod::isMapType(TF_MAP_CARTRACE) || isMapType(TF_MAP_CART) || isMapType(TF_MAP_CTF) || isMapType(TF_MAP_KOTH) ||
-		isMapType(TF_MAP_CP) || isMapType(TF_MAP_PD) || isMapType(TF_MAP_ARENA) || isMapType(TF_MAP_SAXTON) || isMapType(TF_MAP_SD) || isMapType(TF_MAP_DM))
+		isMapType(TF_MAP_CP) || isMapType(TF_MAP_PD) || isMapType(TF_MAP_ARENA) || isMapType(TF_MAP_SAXTON) || isMapType(TF_MAP_SD) || isMapType(TF_MAP_BOSS) || isMapType(TF_MAP_DM))
 	{
 		if (m_pBoss.get() == pEntity)
 			return true;
@@ -917,6 +937,10 @@ int CTeamFortress2Mod::getArea()
 
 bool CTeamFortress2Mod::isPayloadBomb(edict_t* pEdict, int iTeam)
 {
+#ifdef RCBOT_VPROF_ENABLED
+	VPROF_BUDGET("CTeamFortress2Mod::isPayloadBomb", "RCBot2")
+#endif // RCBOT_VPROF_ENABLED
+
 	const string_t mapname = gpGlobals->mapname;
 
 	const char* szmapname = mapname.ToCStr();
@@ -966,6 +990,7 @@ bool CTeamFortress2Mod::isPayloadBomb(edict_t* pEdict, int iTeam)
 	}
 	if (CTeamFortress2Mod::isMapType(TF_MAP_CARTRACE) ||
 		CTeamFortress2Mod::isMapType(TF_MAP_CPPL) ||
+		CTeamFortress2Mod::isMapType(TF_MAP_PDR) ||
 		(CTeamFortress2Mod::isMapType(TF_MAP_CART) &&
 			!(std::strncmp(szmapname, "plr_cutter", 10) == 0 ||
 				std::strncmp(szmapname, "plr_matterhorn", 14) == 0 ||
@@ -1015,7 +1040,7 @@ void CTeamFortress2Mod::checkMVMTankBoss(edict_t *pEntity)
 		}
 	}
 
-	if (CBotGlobals::entityIsAlive(pEntity) && (m_pNearestTankBoss.get() == nullptr || (m_fNearestTankDistance == 0.0f || fTankDistance < m_fNearestTankDistance)))
+	if (CBotGlobals::entityIsAlive(pEntity) && (m_pNearestTankBoss.get() == nullptr || (m_fNearestTankDistance <= 0.0f || fTankDistance < m_fNearestTankDistance)))
 	{
 		m_fNearestTankDistance = fTankDistance;
 		m_pNearestTankBoss = pEntity;
@@ -1190,7 +1215,7 @@ bool CTeamFortress2Mod::buildingNearby(const int iTeam, const Vector& vOrigin)
 edict_t *CTeamFortress2Mod::getBuilding (const eEngiBuild object, const edict_t* pOwner)
 {
 	static int i;
-	static tf_tele_t *tele; //tele not used [APG]RoboCop[CL]
+	static tf_tele_t *tele; //`tele` not used [APG]RoboCop[CL]
 
 	//index = ENTINDEX(pOwner)-1;
 	// i is 1 to 32 ( 0 == worldspawn)
@@ -1658,7 +1683,7 @@ bool CTeamFortress2Mod::isCapping ( edict_t *pPlayer )//, int iCapIndex = -1 )
 	{
 		const int iTeam = CClassInterface::getTeam(pPlayer);
 
-		for ( int i = 0; i < MAX_CAP_POINTS; i ++ )
+		for ( int i = 0; i < MAX_CONTROL_POINTS; i ++ )
 		{				
 			if ( m_ObjectiveResource.isCPValid(i,iTeam,TF2_POINT_ATTACK) )
 			{

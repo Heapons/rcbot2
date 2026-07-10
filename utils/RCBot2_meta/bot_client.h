@@ -255,6 +255,16 @@ public:
 
 	bool isPlayer (const edict_t *pPlayer) const { return m_pPlayer == pPlayer; }
 
+	void setLocation (const char *szLocation)
+	{
+		if (szLocation != nullptr)
+		{
+			std::strncpy(m_szLocation, szLocation, sizeof(m_szLocation) - 1);
+			m_szLocation[sizeof(m_szLocation) - 1] = '\0';
+		}
+	}
+	const char *getLocation () const { return m_szLocation; }
+
 	bool isWaypointOn () const { return m_bWaypointOn; }
 	void setWaypointOn (const bool bOn) { m_bWaypointOn = bOn; }
 	void setWaypoint (const int iWpt) { m_iCurrentWaypoint = iWpt; }
@@ -326,6 +336,8 @@ private:
 	edict_t *m_pPlayer;
 	// steam id
 	char *m_szSteamID;
+	// intercepted SetPlayerLocation usermessage
+	char m_szLocation[128] = "";
 	// is drawing waypoints ON for this player
 	bool m_bWaypointOn;
 	// player editing this waypoint

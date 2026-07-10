@@ -91,16 +91,17 @@ Additionally, `rcbot/logging.{h,cpp}` is released separately under the
 
 ### To-do:-
 
+- To figure out why HL2DM flying props pass through bots
 - To allow bots to menuselect to buy upgrades for MVM
+- To prevent the MVM red bots from being kicked for Blu Machine bots
 - To improve game detection for non-listed Source gamemods
-- To add proper support for the new Zombie Infection TF2 maps since Scream Fortress XV update
+- To add proper support for the new Zombie Infection TF2 maps since Scream Fortress XV update - Testing in progress! (zombie/Hale hunt-target logic added; class tactics below still pending)
 - To add proper support for Robot Destruction gameplay by destroying bots when not ubered
 - To prevent EngiBots from facing their SG Turrets the wrong way - Testing in progress!
-- To allow DemoBots to sticky jump again - might need to check with using RCBot2 v1.7-beta versions
 - To improve on how Medic and Spy bots behave smarter and adequately when interacting with SG Turrets and Healing/Ubering
 - Bots need to understand how to play Kart games from sd_doomsday_event as they only wonder around those minigames
 - CBotTF2::changeClass needs to be implemented to avoid bots punting when using ClassRestrictionsForBots.smx and `rcbot_change_classes 1` - Testing in progress!
-- To add TF2C support along with Black Mesa Source, Counter-Strike: Source, Synergy and Dystopia
+- To add TF2C support along with Black Mesa Source, Counter-Strike: Source, Fortress Forever, Pre-Fortress 2, Synergy and Dystopia
 
 ## Credits:-
 
@@ -110,12 +111,14 @@ Additionally, `rcbot/logging.{h,cpp}` is released separately under the
 - TF2 support and enhancements - Ducky1231/Pongo
 - SourceMod and AMBuild support - nosoop
 - Synergy, TF2, MvM, CSS and AMBuild support - Anonymous Player/caxanga334
-- TF2 Classic support - Technochips
+- TF2 Classified support - Technochips
 - TF2 additional gamemodes support - RussiaTails
 - Linux Black Mesa and SDK2013 mathlib fix - Sappho
 - Dystopia support - Soft As Hell
+- DoDS and main config support fixes - DNA.styx
 - Major waypointer for TF2 - LK777, RussiaTails, Witch, Francis, RevilleAJ, Waffle033
 - Major waypointer for DoDS - INsane, Gamelarg05, genmac
+- Miniz compression - Rich Geldreich and Tenacious Software LLC
 
 ## Waypointers:-
 
@@ -161,3 +164,7 @@ Additionally, `rcbot/logging.{h,cpp}` is released separately under the
 - Sntr
 - mehdichallenger
 - Mikou
+
+## SAST Tools
+
+[PVS-Studio](https://pvs-studio.com/en/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) - static analyzer for C, C++, C#, and Java code.

@@ -305,24 +305,28 @@ bool CDODFlags::isTeamMatePlanting (const edict_t *pIgnore, const int iTeam, con
 	return false;
 }
 
-int CDODFlags::findNearestObjective (const Vector& vOrigin) const
+int CDODFlags::findNearestObjective(const Vector& vOrigin) const
 {
 	float fNearest = 1024.0f;
 	float fDistance;
 	int iNearest = -1;
-	
+
 	for (int i = 0; i < m_iNumControlPoints; i++)
 	{
 		if ( m_iWaypoint[i] != -1 )
 		{
-			if ( (fDistance = (CWaypoints::getWaypoint(m_iWaypoint[i])->getOrigin()-vOrigin).Length()) < fNearest )
+			CWaypoint* waypoint = CWaypoints::getWaypoint(m_iWaypoint[i]);
+
+			if (waypoint != nullptr)
 			{
-				fNearest = fDistance;
-				iNearest = i;
+				if ((fDistance = (waypoint->getOrigin() - vOrigin).Length()) < fNearest)
+				{
+					fNearest = fDistance;
+					iNearest = i;
+				}
 			}
 		}
 	}
-
 	return iNearest;
 }
 
@@ -356,7 +360,7 @@ bool CDODFlags::getRandomEnemyControlledFlag (const CBot *pBot, Vector *position
 		}
 	}
 
-	if ( fTotal == 0.0f )
+	if ( fTotal <= 0.0f )
 		return false;
 
 	const float fRand = randomFloat(0, fTotal);
@@ -573,7 +577,7 @@ bool CDODFlags::getRandomTeamControlledFlag (const CBot *pBot, Vector *position,
 		}
 	}
 
-	if ( fTotal == 0.0f )
+	if ( fTotal <= 0.0f )
 		return false;
 
 	const float fRand = randomFloat(0, fTotal);

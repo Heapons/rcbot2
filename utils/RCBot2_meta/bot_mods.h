@@ -157,6 +157,18 @@ public:
 		*iOff = 0;
 	}
 
+	// Maps an `addbot <class> <team>` team argument to this mod's team number
+	// Returns -1 for "no preference / let the game auto-assign"
+	// Base handles a numeric argument only; mods with named teams override this? [APG]RoboCop[CL]
+	virtual int getTeamByName ( const char *szTeam ) const
+	{
+		if ( szTeam == nullptr || *szTeam == '\0' )
+			return -1;
+		if ( isdigit(static_cast<unsigned char>(szTeam[0])) != 0 )
+			return std::atoi(szTeam);
+		return -1;
+	}
+
 	bool needResetCheatFlag () const
 	{
 		return m_bBotCommand_ResetCheatFlag;
@@ -236,6 +248,11 @@ public:
 		for (int& i : m_iWaypoint)
 		{
 			i = -1;
+		}
+
+		for (float& f : m_fBombPlantedTime)
+		{
+			f = 0.0f;
 		}
 	}
 
@@ -565,9 +582,9 @@ public:
 
 	static float getMapStartTime ();
 
-	static bool isBombMap () { return (m_iMapType & DOD_MAPTYPE_BOMB) == DOD_MAPTYPE_BOMB; } //TODO: both `maphasBombs` and `isBombMap` do the same thing but conflict? [APG]RoboCop[CL]
+	static bool isBombMap () { return (m_iMapType & DOD_MAPTYPE_BOMB) == DOD_MAPTYPE_BOMB; }
 	static bool isFlagMap () { return (m_iMapType & DOD_MAPTYPE_FLAG) == DOD_MAPTYPE_FLAG; }
-	static bool mapHasBombs () { return (m_iMapType & DOD_MAPTYPE_BOMB) == DOD_MAPTYPE_BOMB; }
+	static bool mapHasBombs () { return isBombMap(); }
 
 	static bool isCommunalBombPoint () { return m_bCommunalBombPoint; }
 	static int getBombPointArea (const int iTeam) { if ( iTeam == TEAM_ALLIES ) return m_iBombAreaAllies; return m_iBombAreaAxis; } 
@@ -760,6 +777,17 @@ public:
 	{
 		setup("FortressForever", MOD_FF, BOTTYPE_FF, "FF");
 	}
+
+	void initMod() override;
+
+	const char *getPlayerClass() override
+	{
+		return "CFFPlayer";
+	}
+
+	void getTeamOnlyWaypointFlags(int iTeam, int *iOn, int *iOff) override;
+
+	bool checkWaypointForTeam(CWaypoint *pWpt, int iTeam) override;
 };
 
 class CHLDMSourceMod : public CBotMod
@@ -815,11 +843,13 @@ typedef enum : std::uint8_t
 	TF_MAP_MVM,
 	TF_MAP_RD,
 	TF_MAP_BUMPERCARS,
+	TF_MAP_PDR, // Player Destruction + Payload Race
 	TF_MAP_PD, // Player Destruction
 	TF_MAP_ZI, // Scream Fortress XV (Oct 9th, 2023) update for Zombie Infection maps - [APG]RoboCop[CL]
 	TF_MAP_PASS, //TODO: add support for those gamemodes [APG]RoboCop[CL]
 	TF_MAP_CPPL, // CP+PL Hybrid maps - RussiaTails
 	TF_MAP_GG, // GunGame maps - RussiaTails
+	TF_MAP_BOSS, // Boss gamemode - RussiaTails
 	TF_MAP_MAX
 }eTFMapType;
 
@@ -863,6 +893,31 @@ public:
 
 		m_pResourceEntity = nullptr;
 	}
+
+	// TF2 team numbers: RED=2, BLUE=3 (also used by CTF2ClassifiedMod) [APG]RoboCop[CL]
+	int getTeamByName ( const char *szTeam ) const override
+	{
+		if ( szTeam == nullptr || *szTeam == '\0' )
+			return -1;
+		if ( Q_stricmp(szTeam, "red") == 0 )
+			return TF2_TEAM_RED;
+		if ( Q_stricmp(szTeam, "blu") == 0 || Q_stricmp(szTeam, "blue") == 0 )
+			return TF2_TEAM_BLUE;
+		if ( isdigit(static_cast<unsigned char>(szTeam[0])) != 0 )
+			return std::atoi(szTeam);
+		return -1;
+	}
+
+protected:
+	// Allow subclasses to override the game folder
+	explicit CTeamFortress2Mod(const char *szGameDir)
+	{
+		setup(szGameDir,MOD_TF2,BOTTYPE_TF2,"TF2");
+
+		m_pResourceEntity = nullptr;
+	}
+
+public:
 
 	void mapInit () override;
 
@@ -1205,9 +1260,9 @@ public:
 	
 	static void addCapper(const int cp, const int capper)
 	{
-		assert(cp >= 0 && cp < MAX_CAP_POINTS); // Debug assertion [APG]RoboCop[CL]
+		assert(cp >= 0 && cp < MAX_CONTROL_POINTS); // Debug assertion [APG]RoboCop[CL]
 
-		if (capper > 0 && cp >= 0 && cp < MAX_CAP_POINTS)
+		if (capper > 0 && cp >= 0 && cp < MAX_CONTROL_POINTS)
 		{
 			m_Cappers[cp] |= 1 << (capper - 1);
 		}
@@ -1215,7 +1270,8 @@ public:
 
 	static void removeCappers (const int cp)
 	{
-		m_Cappers[cp] = 0;
+		if (cp >= 0 && cp < MAX_CONTROL_POINTS)
+			m_Cappers[cp] = 0;
 	}
 
 	static void resetCappers ()
@@ -1352,6 +1408,15 @@ private:
 	static float m_fNearestTankDistance;
 	static Vector m_vNearestTankLocation;
 
+};
+
+//TODO: TF2 Classified uses SDK2013 engine with TF2 gameplay - [APG]RoboCop[CL]
+class CTF2ClassifiedMod : public CTeamFortress2Mod
+{
+public:
+	CTF2ClassifiedMod() : CTeamFortress2Mod("tf2classified")
+	{
+	}
 };
 
 class CHalfLifeDeathmatchMod : public CBotMod

@@ -711,6 +711,13 @@ void CTF2ChangeClass :: execute ( IBotEventInterface *pEvent )
 
 	if ( pBot && pBot->isTF() )
 	{
+		// FF's player_changeclass event uses "newclass" not "class".
+		// Reading "class" returns 0 (TF_CLASS_UNDEFINED), which resets
+		// m_iClass and causes selectClass() to fire every frame.
+		// CBotFF::selectClass() already sets m_iClass correctly, so
+		// skip this event for FF bots entirely.
+		if (!pBot->isTF2())
+			return;
 
 		int _class = pEvent->getInt("class");
 
@@ -971,8 +978,8 @@ void CFlagEvent :: execute ( IBotEventInterface *pEvent )
 				CClient* pClient = CClients::get(pPlayer);
 
 				assert(pClient != nullptr);
-				if ( pClient && pClient->autoWaypointOn() )
-					pClient->autoEventWaypoint(CWaypointTypes::W_FL_CAPPOINT,200.0f,false);
+				if (pClient->autoWaypointOn())
+					pClient->autoEventWaypoint(CWaypointTypes::W_FL_CAPPOINT, 200.0f, false);
 			}
 
 			CTeamFortress2Mod::resetFlagStateToDefault();
@@ -980,6 +987,8 @@ void CFlagEvent :: execute ( IBotEventInterface *pEvent )
 		}
 		break;
 	case FLAG_DROPPED: // drop
+	{
+		if ( pPlayer )
 		{
 			IPlayerInfo *p = playerinfomanager->GetPlayerInfo(pPlayer);
 			Vector vLoc;
@@ -994,11 +1003,10 @@ void CFlagEvent :: execute ( IBotEventInterface *pEvent )
 			if ( pBot && pBot->isTF() )
 				static_cast<CBotTF2*>(pBot)->droppedFlag();
 
-			
-			if ( pPlayer )
-				CTeamFortress2Mod::flagDropped(CTeamFortress2Mod::getTeam(pPlayer),vLoc);
+			CTeamFortress2Mod::flagDropped(CTeamFortress2Mod::getTeam(pPlayer),vLoc);
 		}
-		break;
+	}
+	break;
 	case FLAG_RETURN:
 		{
 			if ( CTeamFortress2Mod::isMapType(TF_MAP_SD) )
@@ -1125,14 +1133,16 @@ void CDODRoundOver :: execute ( IBotEventInterface *pEvent )
 	//CDODMod::m_Flags.reset();
 }
 
-void CDODChangeClass :: execute ( IBotEventInterface *pEvent )
+void CDODChangeClass::execute(IBotEventInterface* pEvent)
 {
-	if ( m_pActivator )
-	{
-		if ( CBot *pBot = CBots::getBotPointer(m_pActivator) )
-		{
-			CDODBot *pDODBot = static_cast<CDODBot*>(pBot);
+	if (!pEvent || !m_pActivator)
+		return;
 
+	if (CBot* pBot = CBots::getBotPointer(m_pActivator))
+	{
+		if (pBot->isDOD())
+		{
+			CDODBot* pDODBot = static_cast<CDODBot*>(pBot);
 			pDODBot->selectedClass(pEvent->getInt("class"));
 		}
 	}
@@ -1272,6 +1282,10 @@ void CBotEvents :: freeMemory ()
 
 void CBotEvents::executeEvent(void* pEvent, const eBotEventType iType)
 {
+	// Early exit if event pointer is null (can happen when event is blocked by another plugin) - [APG]RoboCop[CL]
+	if (pEvent == nullptr)
+		return;
+
 	int iEventId = -1;
 
 	std::unique_ptr<IBotEventInterface> pInterface;
@@ -1285,6 +1299,11 @@ void CBotEvents::executeEvent(void* pEvent, const eBotEventType iType)
 	if (pInterface == nullptr)
 		return;
 
+	// Sanity check for event name - [APG]RoboCop[CL]
+	const char* eventName = pInterface->getName();
+	if (eventName == nullptr)
+		return;
+
 	if (iType != TYPE_IGAMEEVENT)
 		iEventId = pInterface->getInt("eventid");
 
@@ -1295,7 +1314,7 @@ void CBotEvents::executeEvent(void* pEvent, const eBotEventType iType)
 		//	bFound = pFound->isEventId(iEventId);
 		//else
 
-		if ( const bool bFound = pFound->forCurrentMod() && pFound->isType(pInterface->getName()) )	
+		if ( const bool bFound = pFound->forCurrentMod() && pFound->isType(eventName) )
 		{
 			const int userid = pInterface->getInt("userid",-1);
 			// set pEvent id for quick checking

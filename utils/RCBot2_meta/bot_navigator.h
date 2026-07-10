@@ -86,6 +86,9 @@ public:
 
 	virtual int getCurrentGoalID () = 0;
 
+	// Remaining nodes in the active route (0 = no onward route / disconnected). Debug only.
+	virtual int getRouteSize () { return 0; }
+
 	virtual Vector getNextPoint () = 0;
 
 	virtual void updatePosition () = 0;
@@ -382,7 +385,6 @@ class CWaypointNavigator : public IBotNavigator
 {
 public:
 	CWaypointNavigator(CBot* pBot)
-		: curr(nullptr), succ(nullptr) // Initialize pointers to nullptr
 	{
 		CWaypointNavigator::init();
 		m_pBot = pBot;
@@ -475,6 +477,11 @@ public:
 		return m_iCurrentWaypoint;
 	}
 
+	int getRouteSize () override
+	{
+		return static_cast<int>(m_currentRoute.size());
+	}
+
 	int getCurrentGoalID () override
 	{
 		return m_iGoalWaypoint;
@@ -515,13 +522,19 @@ private:
 
 	Vector m_vOffset;
 	bool m_bOffsetApplied;
+
+	// Force-advance recovery: time at which a bot that's sat (barely moving) near its
+	// current node -- without registering the touch -- gives up and advances anyway.
+	// 0 = not currently parked. Fixes "frozen at a node" (height offset, undropped
+	// ledge, door-trigger gap) without us hunting each one. [APG]RoboCop[CL]
+	float m_fParkedAtNodeTime = 0.0f;
 };
 
 class CNavMeshNavigator : public IBotNavigator
 {
 public:
 	//TODO: Add Nav Mesh support [APG]RoboCop[CL]
-	CNavMesh* m_theNavMesh; // Add a member variable for the NavMesh instance
+	CNavMesh* m_theNavMesh = nullptr; // Add a member variable for the NavMesh instance
 
 	CNavMeshNavigator();
 	~CNavMeshNavigator() override;
@@ -553,7 +566,7 @@ public:
 
 	//Vector getEnemyPositionPinchPoint ( Vector vOrigin );
 private:
-	CNavMesh * m_pNavMesh;
+	CNavMesh * m_pNavMesh = nullptr;
 };
 
 #endif

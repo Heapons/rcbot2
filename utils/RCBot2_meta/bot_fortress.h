@@ -35,6 +35,15 @@
 
 #include "bot_utility.h"
 
+// Fortress Forever hand-grenade prime/throw button bits (see bot_buttons.cpp).
+// Guarded so they resolve whether or not the in-scope in_buttons.h defines them. [APG]RoboCop[CL]
+#ifndef IN_GRENADE1
+#define IN_GRENADE1 (1 << 23)
+#endif
+#ifndef IN_GRENADE2
+#define IN_GRENADE2 (1 << 24)
+#endif
+
 //#include <stack>
 
 enum : std::uint16_t
@@ -485,7 +494,7 @@ public:
 
 	virtual void engineerBuild ( eEngiBuild iBuilding, eEngiCmd iEngiCmd ) {}
 
-	virtual void spyDisguise (const int iTeam, const byte iClass) {}
+	virtual void spyDisguise (const int iTeam, const int iClass) {}
 
 	virtual bool lookAfterBuildings (float *fTime) { return false; }
 
@@ -883,7 +892,7 @@ public:
 
 	void engineerBuild ( eEngiBuild iBuilding, eEngiCmd iEngiCmd ) override;
 
-	void spyDisguise (int iTeam, byte iClass) override;
+	void spyDisguise (int iTeam, int iClass) override;
 
 	bool hasEngineerBuilt ( eEngiBuild iBuilding ) override;
 
@@ -975,7 +984,7 @@ public:
 
 	bool MvM_IsReady() const;
 
-	void MvM_Upgrade (); // TODO: To allow bots to menuselect in order to buy upgrades? [APG]RoboCop[CL]
+	void MvM_Upgrade (); // Buy MVM upgrades when in upgrade zone between rounds
 
 private:
 	// time for next jump
@@ -993,6 +1002,11 @@ private:
 	MyEHandle m_pPushPayloadBomb;
 	MyEHandle m_pRedPayloadBomb;
 	MyEHandle m_pBluePayloadBomb;
+
+	// Zombie Infection (zi_) maps: blue (zombie) bots cache the nearest red player
+	// to actively hunt instead of wandering. [APG]RoboCop[CL]
+	MyEHandle m_pHuntTarget;
+	float m_fHuntTargetUpdateTime;
 
 	// if demoman has already deployed stickies this is true
 	// once the demoman explodes them then this becomes false
@@ -1045,19 +1059,63 @@ private:
 	int m_iDesiredResistType;
 
 	int m_iMvMUpdateTime; // Tick based update time
+	bool m_bMvMUpgradesDone; // Whether upgrades have been purchased this wave
+	float m_fMvMNextUpgradeTime; // Delay before attempting to buy upgrades
+};
+
+// Fortress Forever team indices
+enum : std::uint8_t
+{
+	FF_TEAM_UNASSIGNED = 0,
+	FF_TEAM_SPECTATOR = 1,
+	FF_TEAM_BLUE = 2,
+	FF_TEAM_RED = 3,
+	FF_TEAM_YELLOW = 4,
+	FF_TEAM_GREEN = 5
 };
 
 class CBotFF : public CBotFortress
 {
+	float m_fSpawnRetryTime = 0.0f;
+	// Time at which the bot should start pressing buttons to trigger respawn.
+	// Before this time, all buttons are released to allow LIFE_DEAD -> LIFE_RESPAWNABLE.
+	float m_fSpawnPressTime = 0.0f;
+	// Time when the class command was first sent (for retry logic).
+	float m_fClassCommandTime = 0.0f;
+	bool m_bHasEverSpawned = false;
+	bool m_bSetClassAutoKill = false;
+	int m_iSpawnRetries = 0;
+	// Next time (engine->Time) the bot may start priming/throwing a grenade.
+	float m_fThrowGrenadeTime = 0.0f;
 public:
 	CBotFF() = default;
 
 	void modThink() override;
 
+	// Fortress Forever primary (frag) grenade tossing; called from modThink().
+	void handleGrenades();
+
+	void currentlyDead() override;
+
+	void died(edict_t *pKiller, const char *pszWeapon) override;
+
+	void spawnInit() override;
+
 	bool isEnemy(edict_t* pEdict, bool bCheckWeapons = true) override;
 
 	bool isTF() override { return true; }
 
+	bool isTF2() override { return false; }
+
+	bool startGame() override;
+
+	TF_Class getClass() override;
+
+	void selectTeam() override;
+
+	void selectClass() override;
+
+	void getTasks(unsigned iIgnore = 0) override;
 };
 
 #endif
