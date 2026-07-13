@@ -1541,12 +1541,21 @@ float CBot :: getEnemyFactor ( edict_t *pEnemy )
 
 void CBot :: touchedWpt ( CWaypoint *pWaypoint, int iNextWaypoint, int iPrevWaypoint )
 {
+	const string_t mapname = gpGlobals->mapname;
+
+	const char* szmapname = mapname.ToCStr();
+
 	resetTouchDistance(48.0f);
 
 	m_fWaypointStuckTime = engine->Time() + randomFloat(7.5f,12.5f);
 
-	if ( pWaypoint->getFlags() & CWaypointTypes::W_FL_JUMP )
-		jump();
+	if (pWaypoint->getFlags() & CWaypointTypes::W_FL_JUMP)
+	{
+		if (std::strncmp(szmapname, "pl_redwood", 10) == 0)
+			m_pButtons->tap(IN_JUMP);
+		else
+			jump();
+	}
 	if ( pWaypoint->getFlags() & CWaypointTypes::W_FL_CROUCH )
 		duck();
 	if ( pWaypoint->getFlags() & CWaypointTypes::W_FL_SPRINT )
