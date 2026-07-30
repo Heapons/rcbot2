@@ -3,6 +3,9 @@
 
 #include <IExtensionSys.h>
 #include <smsdk_config.h>
+#include <sp_vm_api.h>
+#include <sm_platform.h>
+#include <ISourceMod.h>
 //#include <IBinTools.h>
 //#include <ISDKHooks.h>
 #include <ISDKTools.h>
