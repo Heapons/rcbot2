@@ -100,10 +100,14 @@ jobs:
         path: rcbot2
         submodules: recursive
 
+    # SourceMod 1.13 requires the extension API version to be exactly 9.
+    # Pin a v9 SourceMod (tag 1.13.0.7415) instead of tracking master, so the
+    # build is reproducible and can't silently pick up a future v10 API bump.
     - name: Fetch SourceMod 1.13 (extension API v9)
       uses: actions/checkout@v4
       with:
         repository: alliedmodders/sourcemod
+        ref: 2c8fe40610bfdfd20638eb34c2790555fa5d62a0   # tag 1.13.0.7415 (extension API v9)
         path: sm-src
         submodules: recursive
 
