@@ -113,8 +113,7 @@ if builder.options.sm_path:
       "SourceMod headers report SMINTERFACE_EXTENSIONAPI_VERSION {} (need 9). "
       "SourceMod 1.13 refuses to load extensions built against older headers "
       "('Extension version is too old to load'). Update the "
-      "alliedmodders/sourcemod submodule to a 1.13 commit (e.g. tag 1.13.0.7415, "
-      "commit 2c8fe40610bfdfd20638eb34c2790555fa5d62a0) and re-run configure."
+      "alliedmodders/sourcemod submodule to a 1.13 commit and re-run configure."
       .format(sm_ext_api_version))
 
   include_paths += [
