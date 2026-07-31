@@ -1,5 +1,5 @@
 # vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:
-import os, sys
+import os, re, sys
 
 projectName = 'rcbot'
 
@@ -85,6 +85,37 @@ if builder.options.sm_path:
   for sm_dir in required_sm_dirs:
     if not os.path.isdir(sm_dir):
       raise Exception("Required SourceMod directory '{}' not found. Check your --sm-path setting.".format(sm_dir))
+
+  # SourceMod 1.13 bumped SMINTERFACE_EXTENSIONAPI_VERSION to 9 (V9 - SourcePawn
+  # API revamp). SourceMod core refuses to load any extension reporting a lower
+  # version ("Extension version is too old to load (8, min is 9)"). Guard against
+  # silently building against stale pre-1.13 headers -- e.g. an outdated
+  # alliedmodders/sourcemod submodule pin -- which would otherwise produce an
+  # extension that can never load on a 1.13 server.
+  sm_iext_header = os.path.join(builder.options.sm_path, 'public', 'IExtensionSys.h')
+  sm_ext_api_version = None
+  try:
+    with open(sm_iext_header, 'r', encoding='utf-8', errors='replace') as sm_iext:
+      for sm_line in sm_iext:
+        sm_ver_match = re.search(r'#define\s+SMINTERFACE_EXTENSIONAPI_VERSION\s+(\d+)', sm_line)
+        if sm_ver_match:
+          sm_ext_api_version = int(sm_ver_match.group(1))
+          break
+  except OSError as sm_e:
+    raise Exception("Could not read SourceMod header '{}': {}".format(sm_iext_header, sm_e))
+
+  if sm_ext_api_version is None:
+    raise Exception(
+      "Could not determine SMINTERFACE_EXTENSIONAPI_VERSION from '{}'. "
+      "This does not look like a SourceMod 1.13 tree.".format(sm_iext_header))
+  if sm_ext_api_version < 9:
+    raise Exception(
+      "SourceMod headers report SMINTERFACE_EXTENSIONAPI_VERSION {} (need 9). "
+      "SourceMod 1.13 refuses to load extensions built against older headers "
+      "('Extension version is too old to load'). Update the "
+      "alliedmodders/sourcemod submodule to a 1.13 commit (e.g. tag 1.13.0.7415, "
+      "commit 2c8fe40610bfdfd20638eb34c2790555fa5d62a0) and re-run configure."
+      .format(sm_ext_api_version))
 
   include_paths += [
     os.path.join(builder.options.sm_path, 'sourcepawn', 'include'),
